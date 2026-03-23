@@ -1,0 +1,16 @@
+{
+  "name": "clm-platform",
+  "version": "1.0.0",
+  "description": "Contract Lifecycle Management Platform",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && python -m uvicorn main:app --reload --port 8000\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
+    "build": "cd frontend && npm run build",
+    "install:all": "npm install && cd frontend && npm install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

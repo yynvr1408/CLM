@@ -1,0 +1,35 @@
+/* Contracts Page Styles */
+.contracts-layout {
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+.contracts-content {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 28px;
+}
+
+.filters-row {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}

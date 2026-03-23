@@ -1,0 +1,57 @@
+/* Clauses Page Styles */
+
+.clauses-container {
+  padding: 20px;
+}
+
+.clauses-header {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clauses-header h1 {
+  margin: 0;
+}
+
+.clauses-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.clauses-search {
+  width: 200px;
+}
+
+.clauses-category-select {
+  width: 150px;
+}
+
+.clauses-table-wrapper {
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .clauses-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .clauses-filters {
+    flex-direction: column;
+  }
+
+  .clauses-search,
+  .clauses-category-select {
+    width: 100%;
+  }
+
+  .clauses-container {
+    padding: 12px;
+  }
+}
