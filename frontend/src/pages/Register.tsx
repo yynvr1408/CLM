@@ -32,8 +32,8 @@ const Register: React.FC = () => {
   return (
     <Layout className="register-layout">
       <Content className="register-content">
-        <Row justify="center" align="middle" style={{ minHeight: '100vh' }}>
-          <Col xs={24} sm={20} md={12} lg={8}>
+        <Row justify="center" style={{ width: '100%' }}>
+          <Col xs={24} sm={20} md={14} lg={10} xl={8}>
             <Card className="register-card">
               <h1 className="register-title">Register</h1>
               <Form

@@ -2,6 +2,9 @@
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
@@ -48,10 +51,10 @@ async def lifespan(app: FastAPI):
             print("Created user role.")
 
         # Create default admin user if missing
-        admin_user = db.query(User).filter(User.email == "admin@clm.local").first()
+        admin_user = db.query(User).filter(User.email == "admin@clm.com").first()
         if not admin_user:
             admin_user = User(
-                email="admin@clm.local",
+                email="admin@clm.com",
                 username="admin",
                 full_name="System Administrator",
                 hashed_password=hash_password("admin@123"),
@@ -61,7 +64,7 @@ async def lifespan(app: FastAPI):
             )
             db.add(admin_user)
             db.commit()
-            print("Created default admin user (admin@clm.local / admin@123).")
+            print("Created default admin user (admin@clm.com / admin@123).")
     finally:
         db.close()
 
@@ -121,15 +124,41 @@ def health_check():
     return {"status": "ok", "service": settings.PROJECT_NAME}
 
 
-@app.get("/")
-def root():
-    """Root endpoint."""
-    return {
-        "message": "Welcome to CLM Platform",
-        "version": "1.0.0",
-        "docs_url": "/api/docs",
-        "health_url": "/health"
-    }
+import sys
+
+# Create static directory path compatible with PyInstaller
+if getattr(sys, 'frozen', False):
+    # Running in a PyInstaller bundle
+    BASE_DIR = sys._MEIPASS
+else:
+    # Running in normal Python environment
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+if os.path.exists(STATIC_DIR):
+    # Mount the assets directory (where JS/CSS land in Vite build)
+    assets_dir = os.path.join(STATIC_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    
+    # Catch-all route to serve the SPA index.html for React Router
+    @app.get("/{catchall:path}")
+    def serve_frontend(catchall: str):
+        file_path = os.path.join(STATIC_DIR, catchall)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+else:
+    @app.get("/")
+    def root():
+        """Root endpoint."""
+        return {
+            "message": "Welcome to CLM Platform API (Frontend not built)",
+            "version": "1.0.0",
+            "docs_url": "/api/docs",
+            "health_url": "/health"
+        }
 
 
 if __name__ == "__main__":

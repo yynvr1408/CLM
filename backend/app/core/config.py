@@ -18,11 +18,14 @@ class Settings(BaseSettings):
     
     # Basic
     PROJECT_NAME: str = "CLM Platform"
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_V1_STR: str = "/api/v1"
     
+    class Config:
+        case_sensitive = True
+    
     # Database
-    DATABASE_URL: str = "sqlite:///./clm_data.db"
+    DATABASE_URL: str = "sqlite:///./clm_database.db"
     
     # JWT
     SECRET_KEY: str = "your-super-secret-key-change-in-production"

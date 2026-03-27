@@ -10,12 +10,17 @@ _engine_kwargs: dict = {
     "echo": settings.DEBUG,
 }
 if _is_sqlite:
-    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+    # This block is removed as connect_args is handled separately below
+    pass
 else:
     _engine_kwargs["pool_pre_ping"] = True
 
 # Create database engine
-engine = create_engine(settings.DATABASE_URL, **_engine_kwargs)
+engine_args = {}
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine_args["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(settings.DATABASE_URL, **engine_args, **_engine_kwargs)
 
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
