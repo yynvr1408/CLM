@@ -12,9 +12,14 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Contracts from './pages/Contracts';
+import ContractForm from './pages/ContractForm';
+import ContractDetail from './pages/ContractDetail';
 import Clauses from './pages/Clauses';
+import ClauseForm from './pages/ClauseForm';
+import ClauseDetail from './pages/ClauseDetail';
 import Approvals from './pages/Approvals';
 import Renewals from './pages/Renewals';
+import AuditLogs from './pages/AuditLogs';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -41,9 +46,16 @@ function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/contracts" element={<Contracts />} />
+            <Route path="/contracts/new" element={<ContractForm />} />
+            <Route path="/contracts/:id" element={<ContractDetail />} />
+            <Route path="/contracts/:id/edit" element={<ContractForm />} />
             <Route path="/clauses" element={<Clauses />} />
+            <Route path="/clauses/new" element={<ClauseForm />} />
+            <Route path="/clauses/:id" element={<ClauseDetail />} />
+            <Route path="/clauses/:id/edit" element={<ClauseForm />} />
             <Route path="/approvals" element={<Approvals />} />
             <Route path="/renewals" element={<Renewals />} />
+            <Route path="/audit" element={<AuditLogs />} />
           </Route>
 
           {/* Default redirect */}

@@ -1,0 +1,24 @@
+/* Clause Form Page */
+.clause-form-layout {
+  background-color: var(--clm-bg);
+  min-height: 100%;
+}
+
+.clause-form-content {
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .clause-form-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .clause-form-content {
+    padding: 12px;
+  }
+}

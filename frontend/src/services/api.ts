@@ -38,6 +38,15 @@ class ApiService {
     }
 
     if (!response.ok) {
+      // On 401, clear stale token and redirect to login
+      if (response.status === 401) {
+        this.token = null;
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+          window.location.href = "/login";
+        }
+      }
       throw new Error(data?.detail || `API Error: ${response.status}`);
     }
 

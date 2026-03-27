@@ -1,44 +1,29 @@
-/* Dashboard Styles */
-.dashboard-layout {
-  background-color: #f0f2f5;
-  min-height: 100vh;
+/* Dashboard wrapper */
+.dashboard-wrapper {
+  padding: 28px 32px;
+  width: 100%;
+  min-height: 100%;
 }
 
-.dashboard-content {
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+/* Override Ant Design table within new cards */
+.dashboard-wrapper .ant-table-wrapper {
+  overflow-x: auto;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+.dashboard-wrapper .ant-table {
+  background: transparent;
 }
 
-.page-header h1 {
-  margin: 0;
-  color: #1f1f1f;
-  font-size: 28px;
+/* Tablet */
+@media (max-width: 768px) {
+  .dashboard-wrapper {
+    padding: 16px;
+  }
 }
 
-.stats-row {
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  text-align: center;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+/* Phone */
+@media (max-width: 480px) {
+  .dashboard-wrapper {
+    padding: 12px;
+  }
 }

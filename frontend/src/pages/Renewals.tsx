@@ -3,6 +3,7 @@ import { Layout, Table, Tag, message, Alert } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import apiService from '../services/api';
 import { Renewal } from '../types';
+import './Renewals.css';
 
 const { Content } = Layout;
 
@@ -82,9 +83,11 @@ const Renewals: React.FC = () => {
   ];
 
   return (
-    <Layout>
-      <Content style={{ padding: '20px' }}>
-        <h1>Contract Renewals</h1>
+    <Layout className="renewals-layout">
+      <Content className="renewals-content">
+        <div className="page-header">
+          <h1>Contract Renewals</h1>
+        </div>
 
         {/* Upcoming Renewals Alert */}
         {upcomingRenewals.length > 0 && (
@@ -93,33 +96,41 @@ const Renewals: React.FC = () => {
             type="warning"
             icon={<BellOutlined />}
             closable
-            style={{ marginBottom: '20px' }}
+            className="renewals-alert"
           />
         )}
 
-        <h2>Overdue & Pending Renewals</h2>
-        <Table
-          loading={loading}
-          dataSource={renewals}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: total,
-            onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
-          }}
-        />
+        <h2 className="renewals-section-title">Overdue & Pending Renewals</h2>
+        <div className="renewals-table-card">
+          <Table
+            loading={loading}
+            dataSource={renewals}
+            columns={columns}
+            rowKey="id"
+            scroll={{ x: 600 }}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: total,
+              onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} renewals`,
+            }}
+          />
+        </div>
 
         {upcomingRenewals.length > 0 && (
           <>
             <h2 className="renewals-section-title">Upcoming Renewals (Next 30 Days)</h2>
-            <Table
-              dataSource={upcomingRenewals}
-              columns={columns}
-              rowKey="id"
-              pagination={false}
-            />
+            <div className="renewals-table-card">
+              <Table
+                dataSource={upcomingRenewals}
+                columns={columns}
+                rowKey="id"
+                scroll={{ x: 600 }}
+                pagination={false}
+              />
+            </div>
           </>
         )}
       </Content>

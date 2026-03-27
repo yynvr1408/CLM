@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layout, Form, Input, Button, message, Card, Row, Col } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
+import './Register.css';
 
 const { Content } = Layout;
 
@@ -29,11 +30,11 @@ const Register: React.FC = () => {
   };
 
   return (
-    <Layout>
-      <Content style={{ padding: '50px', background: '#f0f2f5', minHeight: '100vh' }}>
-        <Row justify="center">
+    <Layout className="register-layout">
+      <Content className="register-content">
+        <Row justify="center" align="middle" style={{ minHeight: '100vh' }}>
           <Col xs={24} sm={20} md={12} lg={8}>
-            <Card>
+            <Card className="register-card">
               <h1 className="register-title">Register</h1>
               <Form
                 form={form}

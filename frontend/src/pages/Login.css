@@ -1,7 +1,7 @@
-/* Login Page Styles */
+/* Login Page */
 .login-layout {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
 }
 
 .login-content {
@@ -9,29 +9,98 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  padding: 20px;
 }
 
 .login-card {
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 420px;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2) !important;
+  border: none !important;
+}
+
+.login-card .ant-card-body {
+  padding: 40px 32px !important;
 }
 
 .login-card h1 {
-  color: #667eea;
-  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+  font-size: 2rem;
   margin: 0;
 }
 
 .login-card p {
-  color: #666;
+  color: #64748b;
   font-size: 14px;
+  margin-top: 4px;
 }
+
 .login-title-center {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
 }
 
 .login-footer-center {
   text-align: center;
-  margin-top: 16px;
+  margin-top: 12px;
+}
+
+.login-footer-center p {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.login-footer-center a {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.login-footer-center a:hover {
+  color: #8b5cf6;
+}
+
+/* Ant Design overrides for login */
+.login-card .ant-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  border: none !important;
+  height: 44px;
+  border-radius: 10px !important;
+  font-weight: 600;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+}
+
+.login-card .ant-btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+
+.login-card .ant-input,
+.login-card .ant-input-password {
+  border-radius: 8px !important;
+  border-color: #e2e8f0 !important;
+}
+
+.login-card .ant-input:focus,
+.login-card .ant-input-password:focus-within {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+}
+
+@media (max-width: 480px) {
+  .login-content {
+    padding: 16px;
+    align-items: flex-start;
+    padding-top: 60px;
+  }
+  .login-card .ant-card-body {
+    padding: 24px 18px !important;
+  }
+  .login-card h1 {
+    font-size: 1.5rem;
+  }
 }

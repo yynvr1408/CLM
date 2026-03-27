@@ -1,13 +1,11 @@
 """Database models for CLM Platform."""
 from datetime import datetime
-from typing import List
 from sqlalchemy import (
-    Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text,
-    Date, TIMESTAMP, Index, UniqueConstraint, JSON, event, func
+    Boolean, Column, DateTime, ForeignKey, Integer, String, Text,
+    Date, Index, UniqueConstraint, JSON
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-import enum
 
 Base = declarative_base()
 
@@ -42,10 +40,7 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
     
-    __table_args__ = (
-        Index('ix_users_email', 'email'),
-        Index('ix_users_username', 'username'),
-    )
+    # email and username already have index=True on their columns
     
     role = relationship("Role", back_populates="users")
     contracts = relationship("Contract", back_populates="owner")
@@ -75,9 +70,7 @@ class Contract(Base):
     executed_at = Column(DateTime, nullable=True)
     
     __table_args__ = (
-        Index('ix_contracts_contract_number', 'contract_number'),
         Index('ix_contracts_status', 'status'),
-        Index('ix_contracts_owner_id', 'owner_id'),
     )
     
     owner = relationship("User", back_populates="contracts")
@@ -102,7 +95,6 @@ class ContractVersion(Base):
     
     __table_args__ = (
         UniqueConstraint('contract_id', 'version_number', name='uq_contract_version'),
-        Index('ix_contract_versions_contract_id', 'contract_id'),
     )
     
     contract = relationship("Contract", back_populates="versions")
@@ -122,10 +114,7 @@ class Clause(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    __table_args__ = (
-        Index('ix_clauses_title', 'title'),
-        Index('ix_clauses_category', 'category'),
-    )
+    # title and category already have index=True on their columns
     
     contracts = relationship("ContractClause", back_populates="clause")
 
@@ -142,7 +131,6 @@ class ContractClause(Base):
     
     __table_args__ = (
         UniqueConstraint('contract_id', 'clause_id', name='uq_contract_clause'),
-        Index('ix_contract_clauses_contract_id', 'contract_id'),
     )
     
     contract = relationship("Contract", back_populates="clauses")
@@ -163,10 +151,7 @@ class Approval(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    __table_args__ = (
-        Index('ix_approvals_contract_id', 'contract_id'),
-        Index('ix_approvals_status', 'status'),
-    )
+    # indexes handled via column-level index=True where needed
     
     contract = relationship("Contract", back_populates="approvals")
     approver = relationship("User", back_populates="approvals")
@@ -185,10 +170,7 @@ class Renewal(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    __table_args__ = (
-        Index('ix_renewals_contract_id', 'contract_id'),
-        Index('ix_renewals_renewal_date', 'renewal_date'),
-    )
+    # indexes handled via column-level index=True where needed
     
     contract = relationship("Contract", back_populates="renewals")
 
@@ -208,11 +190,7 @@ class AuditLog(Base):
     user_agent = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     
-    __table_args__ = (
-        Index('ix_audit_logs_user_id', 'user_id'),
-        Index('ix_audit_logs_contract_id', 'contract_id'),
-        Index('ix_audit_logs_created_at', 'created_at'),
-    )
+    # created_at already has index=True on column
     
     user = relationship("User", back_populates="audit_logs")
     contract = relationship("Contract", back_populates="audit_logs")

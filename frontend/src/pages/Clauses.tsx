@@ -4,6 +4,7 @@ import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
 import { Clause } from '../types';
+import './Clauses.css';
 
 const { Content } = Layout;
 
@@ -92,9 +93,9 @@ const ClausesList: React.FC = () => {
   ];
 
   return (
-    <Layout>
-      <Content style={{ padding: '20px' }}>
-        <div className="clauses-header">
+    <Layout className="clauses-layout">
+      <Content className="clauses-content">
+        <div className="page-header">
           <h1>Clause Library</h1>
           <Button
             type="primary"
@@ -117,9 +118,9 @@ const ClausesList: React.FC = () => {
           />
           <Select
             placeholder="Filter by category"
-            value={filters.category}
-            onChange={(value) => setFilters({ ...filters, category: value })}
-            style={{ width: '200px' }}
+            value={filters.category || undefined}
+            onChange={(value) => setFilters({ ...filters, category: value || '' })}
+            className="clauses-category-select"
             allowClear
           >
             {categories.map((cat) => (
@@ -131,18 +132,23 @@ const ClausesList: React.FC = () => {
         </div>
 
         {/* Clauses Table */}
-        <Table
-          loading={loading}
-          dataSource={clauses}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: total,
-            onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
-          }}
-        />
+        <div className="clauses-table-card">
+          <Table
+            loading={loading}
+            dataSource={clauses}
+            columns={columns}
+            rowKey="id"
+            scroll={{ x: 700 }}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: total,
+              onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} clauses`,
+            }}
+          />
+        </div>
       </Content>
     </Layout>
   );

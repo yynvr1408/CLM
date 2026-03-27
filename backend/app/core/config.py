@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Database
-    DATABASE_URL: str = "postgresql://clm_user:clm_password@localhost:5432/clm_db"
+    DATABASE_URL: str = "sqlite:///./clm_data.db"
     
     # JWT
     SECRET_KEY: str = "your-super-secret-key-change-in-production"

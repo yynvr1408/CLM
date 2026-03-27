@@ -80,20 +80,19 @@ app = FastAPI(
 )
 
 
-# CORS Middleware
+# Trusted Host Middleware (added first so it runs after CORS)
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=settings.ALLOWED_HOSTS,
+)
+
+# CORS Middleware (added second so it runs first — reverse order in Starlette)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-
-# Trusted Host Middleware
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=settings.ALLOWED_HOSTS,
 )
 
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, Table, Space, Tag, Modal, Input, Select, message, Row, Col } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Layout, Button, Table, Space, Tag, Modal, Input, Select, message } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
 import { Contract } from '../types';
@@ -129,44 +129,47 @@ const ContractsList: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <Row gutter={16} className="filters-row" style={{ marginBottom: '20px' }}>
-          <Col xs={24} sm={12} md={8}>
-            <Input
-              placeholder="Search contracts..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            />
-          </Col>
-          <Col xs={24} sm={12} md={8}>
-            <Select
-              placeholder="Filter by status"
-              value={filters.status}
-              onChange={(value) => setFilters({ ...filters, status: value })}
-              style={{ width: '100%' }}
-              allowClear
-            >
-              <Select.Option value="draft">Draft</Select.Option>
-              <Select.Option value="submitted">Submitted</Select.Option>
-              <Select.Option value="approved">Approved</Select.Option>
-              <Select.Option value="rejected">Rejected</Select.Option>
-              <Select.Option value="executed">Executed</Select.Option>
-            </Select>
-          </Col>
-        </Row>
+        <div className="contracts-filters">
+          <Input
+            placeholder="Search contracts..."
+            value={filters.search}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            prefix={<SearchOutlined />}
+            style={{ minWidth: 220 }}
+          />
+          <Select
+            placeholder="Filter by status"
+            value={filters.status || undefined}
+            onChange={(value) => setFilters({ ...filters, status: value || '' })}
+            style={{ minWidth: 180 }}
+            allowClear
+          >
+            <Select.Option value="draft">Draft</Select.Option>
+            <Select.Option value="submitted">Submitted</Select.Option>
+            <Select.Option value="approved">Approved</Select.Option>
+            <Select.Option value="rejected">Rejected</Select.Option>
+            <Select.Option value="executed">Executed</Select.Option>
+          </Select>
+        </div>
 
         {/* Contracts Table */}
-        <Table
-          loading={loading}
-          dataSource={contracts}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: total,
-            onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
-          }}
-        />
+        <div className="contracts-table-card">
+          <Table
+            loading={loading}
+            dataSource={contracts}
+            columns={columns}
+            rowKey="id"
+            scroll={{ x: 800 }}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: total,
+              onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
+              showSizeChanger: true,
+              showTotal: (total) => `Total ${total} contracts`,
+            }}
+          />
+        </div>
 
         {/* Delete Modal */}
         <Modal
@@ -177,7 +180,7 @@ const ContractsList: React.FC = () => {
           okText="Delete"
           okType="danger"
         >
-          <p>Are you sure you want to delete this contract?</p>
+          <p>Are you sure you want to delete this contract? This action cannot be undone.</p>
         </Modal>
       </Content>
     </Layout>

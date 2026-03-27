@@ -1,71 +1,56 @@
-.renewals-container {
-  padding: 20px;
+/* Renewals Page */
+.renewals-layout {
+  background-color: var(--clm-bg);
+  min-height: 100%;
+}
+
+.renewals-content {
+  padding: 28px 32px;
+  width: 100%;
 }
 
 .renewals-alert {
   margin-bottom: 20px;
-  padding: 16px;
-  background-color: #fff7e6;
-  border: 1px solid #ffd591;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
-.renewals-alert-icon {
-  color: #faad14;
-  font-size: 20px;
-}
-
-.renewals-alert-text {
-  color: #ad6800;
-  font-weight: 500;
-}
-
-.renewals-section {
-  margin-bottom: 30px;
-}
-
-.renewals-section-title {
-  margin-top: 30px;
-  margin-bottom: 16px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f1f1f;
-}
-
-.renewals-table {
-  border: 1px solid #f0f0f0;
-  border-radius: 4px;
+.renewals-table-card {
+  background: var(--clm-surface);
+  border-radius: var(--clm-radius);
+  box-shadow: var(--clm-shadow);
+  border: 1px solid var(--clm-border);
+  padding: 0;
   overflow: hidden;
 }
 
-.renewals-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: #8c8c8c;
+.renewals-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--clm-text);
+  margin: 28px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--clm-primary-light);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.renewal-status-pending {
-  color: #faad14;
-}
-
-.renewal-status-upcoming {
-  color: #1890ff;
-}
-
-.renewal-status-overdue {
-  color: #ff4d4f;
+.renewals-section-title::before {
+  content: '';
+  width: 4px;
+  height: 18px;
+  background: var(--clm-gradient);
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
-  .renewals-container {
-    padding: 12px;
+  .renewals-content {
+    padding: 16px;
   }
+}
 
-  .renewals-alert {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 480px) {
+  .renewals-content {
+    padding: 12px;
   }
 }

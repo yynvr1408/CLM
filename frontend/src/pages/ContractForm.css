@@ -1,0 +1,58 @@
+/* Contract Form Page */
+.contract-form-layout {
+  background-color: var(--clm-bg);
+  min-height: 100%;
+}
+
+.contract-form-content {
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.form-card {
+  box-shadow: var(--clm-shadow) !important;
+  border-radius: var(--clm-radius) !important;
+  border: 1px solid var(--clm-border) !important;
+}
+
+.form-card .ant-card-head {
+  border-bottom: 2px solid var(--clm-primary-light);
+}
+
+.form-card .ant-card-head-title {
+  font-weight: 700;
+  color: var(--clm-text);
+}
+
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.clause-selected-row {
+  background-color: var(--clm-primary-light);
+}
+
+@media (max-width: 768px) {
+  .contract-form-content {
+    padding: 16px;
+  }
+
+  .form-card .ant-card-body {
+    padding: 16px !important;
+  }
+
+  .form-grid-2col {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .contract-form-content {
+    padding: 12px;
+  }
+}

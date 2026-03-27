@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(python -c \":*)",
+      "Bash(rm -f \"C:\\\\Users\\\\sisin\\\\Downloads\\\\shastry-project\\\\CLM\\\\CLM\\\\backend\\\\clm_data.db\")",
+      "Bash(timeout 10 python -m uvicorn main:app --port 8000)",
+      "Bash(timeout 8 python -m uvicorn main:app --port 8000 --no-access-log)",
+      "Bash(pip install:*)",
+      "Bash(python generate_pdf.py)",
+      "Bash(timeout 10 python -c \"from main import app; print\\(''Backend imports OK''\\)\")"
+    ]
+  }
+}

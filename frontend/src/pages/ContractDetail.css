@@ -1,0 +1,46 @@
+/* Contract Detail Page */
+.contract-detail-layout {
+  background-color: var(--clm-bg);
+  min-height: 100%;
+}
+
+.contract-detail-content {
+  padding: 28px 32px;
+  width: 100%;
+}
+
+.detail-card {
+  box-shadow: var(--clm-shadow) !important;
+  border-radius: var(--clm-radius) !important;
+  border: 1px solid var(--clm-border) !important;
+}
+
+.audit-change-pre {
+  font-size: 12px;
+  margin-top: 4px;
+  background: #f8fafc;
+  padding: 8px;
+  border-radius: 6px;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--clm-border);
+  font-family: 'Fira Code', 'Consolas', monospace;
+}
+
+@media (max-width: 768px) {
+  .contract-detail-content {
+    padding: 16px;
+  }
+
+  .ant-descriptions-item-label {
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 480px) {
+  .contract-detail-content {
+    padding: 12px;
+  }
+}

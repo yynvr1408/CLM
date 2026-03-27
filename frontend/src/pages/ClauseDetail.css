@@ -1,0 +1,38 @@
+/* Clause Detail Page */
+.clause-detail-layout {
+  background-color: var(--clm-bg);
+  min-height: 100%;
+}
+
+.clause-detail-content {
+  padding: 28px 32px;
+  width: 100%;
+}
+
+.clause-content-card {
+  margin-top: 16px;
+}
+
+.clause-content-body {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 14px;
+  color: var(--clm-text);
+}
+
+@media (max-width: 768px) {
+  .clause-detail-content {
+    padding: 16px;
+  }
+
+  .clause-content-body {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+@media (max-width: 480px) {
+  .clause-detail-content {
+    padding: 12px;
+  }
+}

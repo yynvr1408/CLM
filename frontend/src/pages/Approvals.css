@@ -1,0 +1,36 @@
+/* Approvals Page */
+.approvals-layout {
+  background-color: var(--clm-bg);
+  min-height: 100%;
+}
+
+.approvals-content {
+  padding: 28px 32px;
+  width: 100%;
+}
+
+.approvals-table-card {
+  background: var(--clm-surface);
+  border-radius: var(--clm-radius);
+  box-shadow: var(--clm-shadow);
+  border: 1px solid var(--clm-border);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Action buttons in table */
+.approvals-content .ant-btn-primary .anticon {
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .approvals-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .approvals-content {
+    padding: 12px;
+  }
+}

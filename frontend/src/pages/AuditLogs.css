@@ -1,0 +1,48 @@
+/* Audit Logs Page */
+.audit-layout {
+  background-color: var(--clm-bg);
+  min-height: 100%;
+}
+
+.audit-content {
+  padding: 28px 32px;
+  width: 100%;
+}
+
+.audit-card {
+  box-shadow: var(--clm-shadow) !important;
+  border-radius: var(--clm-radius) !important;
+  border: 1px solid var(--clm-border) !important;
+}
+
+.audit-filters-row {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--clm-border);
+}
+
+.changes-pre {
+  font-size: 11px;
+  margin: 0;
+  max-height: 60px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f8fafc;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--clm-border);
+  font-family: 'Fira Code', 'Consolas', monospace;
+}
+
+@media (max-width: 768px) {
+  .audit-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .audit-content {
+    padding: 12px;
+  }
+}
