@@ -4,8 +4,10 @@ import { ArrowLeftOutlined, SaveOutlined, SendOutlined, PlusOutlined, DeleteOutl
 import { useNavigate, useParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import apiService from '../services/api';
-import { Contract, Clause } from '../types';
+import { Contract, Clause, Attachment } from '../types';
+import FileUploader from '../components/FileUploader';
 import './ContractForm.css';
+
 
 const { Content } = Layout;
 const { TextArea } = Input;
@@ -18,6 +20,8 @@ const ContractForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [contract, setContract] = useState<Contract | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+
 
   // Clause selection state
   const [availableClauses, setAvailableClauses] = useState<Clause[]>([]);
@@ -45,6 +49,7 @@ const ContractForm: React.FC = () => {
         start_date: data.start_date ? dayjs(data.start_date) : null,
         end_date: data.end_date ? dayjs(data.end_date) : null,
       });
+      setAttachments(data.attachments || []);
       // Load associated clauses if available
       if ((data as any).clauses) {
         setSelectedClauseIds((data as any).clauses.map((c: Clause) => c.id));
@@ -258,7 +263,19 @@ const ContractForm: React.FC = () => {
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </div>
+
+            {isEdit && (
+              <div style={{ marginTop: 24 }}>
+                <FileUploader
+                  parentId={{ contract_id: parseInt(id!) }}
+                  existingAttachments={attachments}
+                  onUploadSuccess={(att) => setAttachments(prev => [...prev, att])}
+                  onDeleteSuccess={(attId) => setAttachments(prev => prev.filter(a => a.id !== attId))}
+                />
+              </div>
+            )}
           </Form>
+
         </Card>
 
         {/* Clause Selection (only for new contracts) */}

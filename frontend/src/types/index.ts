@@ -62,6 +62,7 @@ export interface Contract {
   executed_at?: string;
   clauses?: Clause[];
   tags?: Tag[];
+  attachments?: Attachment[];
 }
 
 export interface Clause {
@@ -73,7 +74,9 @@ export interface Clause {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  attachments?: Attachment[];
 }
+
 
 export interface Tag {
   id: number;
@@ -95,6 +98,7 @@ export interface ContractTemplate {
   organization_id?: number;
   created_by_id: number;
   clauses: Clause[];
+  attachments?: Attachment[];
   created_at: string;
   updated_at: string;
 }
@@ -181,7 +185,18 @@ export interface DashboardStats {
   contracts_expiring_90d: number;
 }
 
+export interface Attachment {
+  id: number;
+  filename: string;
+  file_path: string;
+  file_type?: string;
+  file_size?: number;
+  uploaded_by_id: number;
+  created_at: string;
+}
+
 export interface ApiResponse<T> {
+
   total?: number;
   skip?: number;
   limit?: number;
@@ -190,4 +205,72 @@ export interface ApiResponse<T> {
   message?: string;
   error?: string;
   unread_count?: number;
+}
+
+export interface ClauseVersion {
+  id: number;
+  clause_id: number;
+  version_number: number;
+  title: string;
+  content: string;
+  category: string;
+  created_by_id: number;
+  created_at: string;
+}
+
+export interface ClauseVersionResponse extends ClauseVersion {}
+
+export interface AuditLogResponse {
+  id: number;
+  user_id: number;
+  action: string;
+  resource_type: string;
+  resource_id?: number;
+  contract_id?: number;
+  clause_id?: number;
+  changes?: Record<string, { old: any; new: any }>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  user_full_name?: string;
+}
+
+export interface IntegrityStatus {
+  is_valid: boolean;
+  broken_id?: number;
+  total_logs: number;
+}
+
+
+export interface ContractResponse extends Contract {}
+export interface ContractDetailResponse extends Contract {
+  clauses: Clause[];
+  tags: Tag[];
+}
+
+export interface ClauseCreate extends Omit<Clause, 'id' | 'version' | 'is_active' | 'created_at' | 'updated_at' | 'attachments'> {}
+export interface ClauseUpdate extends Partial<ClauseCreate> {}
+export interface ClauseResponse extends Clause {}
+
+export interface ApprovalResponse extends Approval {
+  contract_title?: string;
+  contract_number?: string;
+}
+export interface ApprovalCreate {
+  approver_id: number;
+  approval_level: number;
+  comments?: string;
+}
+
+export interface RenewalResponse extends Renewal {}
+
+export interface AttachmentResponse extends Attachment {}
+
+export interface BulkStatusUpdate {
+  contract_ids: number[];
+  new_status: string;
+}
+
+export interface BulkDeleteRequest {
+  contract_ids: number[];
 }

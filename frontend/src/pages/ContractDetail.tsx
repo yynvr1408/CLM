@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Card, Descriptions, Tag, Button, Table, Space, Spin, message, Timeline, Tabs } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, SendOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 import apiService from '../services/api';
-import { Approval, AuditLog } from '../types';
+import { Approval, AuditLogResponse } from '../types';
 import './ContractDetail.css';
 
 const { Content } = Layout;
@@ -11,26 +13,35 @@ const { Content } = Layout;
 const ContractDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { user } = useSelector((state: RootState) => state.auth);
+  
   const [loading, setLoading] = useState(true);
   const [contract, setContract] = useState<any>(null);
   const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [auditTrail, setAuditTrail] = useState<AuditLog[]>([]);
+  const [auditTrail, setAuditTrail] = useState<AuditLogResponse[]>([]);
+
+  const isAuthorized = user?.is_superuser || 
+                       ['super_admin', 'admin', 'contract_manager'].includes(user?.role_name || '');
 
   useEffect(() => {
     if (id) loadContractData(parseInt(id));
-  }, [id]);
+  }, [id, user]);
 
   const loadContractData = async (contractId: number) => {
     setLoading(true);
     try {
+      const fetchHistory = isAuthorized 
+        ? apiService.getContractHistory(contractId).catch(() => [])
+        : Promise.resolve([]);
+
       const [contractData, approvalsData, auditData] = await Promise.all([
         apiService.getContract(contractId),
         apiService.getContractApprovals(contractId).catch(() => ({ items: [] })),
-        apiService.getContractAuditTrail(contractId).catch(() => []),
+        fetchHistory
       ]);
       setContract(contractData);
       setApprovals(approvalsData.items || approvalsData || []);
-      setAuditTrail(Array.isArray(auditData) ? auditData : auditData.items || []);
+      setAuditTrail(auditData || []);
     } catch (error: any) {
       message.error('Failed to load contract');
       navigate('/contracts');
@@ -104,7 +115,7 @@ const ContractDetail: React.FC = () => {
 
   if (!contract) return null;
 
-  const tabItems = [
+  const detailTabs = [
     {
       key: 'details',
       label: 'Details',
@@ -173,33 +184,63 @@ const ContractDetail: React.FC = () => {
         />
       ),
     },
-    {
+  ];
+
+  if (isAuthorized) {
+    detailTabs.push({
       key: 'audit',
       label: 'Audit Trail',
       children: auditTrail.length > 0 ? (
         <Timeline
-          items={auditTrail.map((log) => ({
-            color: log.action.includes('create') ? 'green' : log.action.includes('delete') ? 'red' : 'blue',
-            children: (
-              <div>
-                <strong>{log.action}</strong>
-                <span style={{ marginLeft: 8, color: '#888' }}>
-                  {new Date(log.created_at).toLocaleString()}
-                </span>
-                {log.changes && (
-                  <pre className="audit-change-pre">
-                    {JSON.stringify(log.changes, null, 2)}
-                  </pre>
-                )}
-              </div>
-            ),
-          }))}
+          mode="left"
+          items={auditTrail.map((log) => {
+            const getLogColor = (action: string) => {
+              switch (action.toUpperCase()) {
+                case 'CREATE': return 'green';
+                case 'UPDATE': return 'blue';
+                case 'SUBMIT': return 'orange';
+                case 'APPROVE': return 'green';
+                case 'REJECT': return 'red';
+                case 'DELETE': return 'red';
+                default: return 'gray';
+              }
+            };
+
+            return {
+              color: getLogColor(log.action),
+              children: (
+                <div className="audit-timeline-item">
+                  <div className="audit-header">
+                    <Tag color={getLogColor(log.action)}>{log.action.toUpperCase()}</Tag>
+                    <span className="audit-user">{log.user_full_name || 'System'}</span>
+                    <span className="audit-time">
+                      {new Date(log.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  {log.changes && Object.keys(log.changes).length > 0 && (
+                    <div className="audit-changes">
+                      <ul className="audit-changes-list">
+                        {Object.entries(log.changes).map(([field, delta]: [string, any]) => (
+                          <li key={field}>
+                            <span className="field-name">{field}:</span>
+                            <span className="old-val">{String(delta.old)}</span>
+                            <span className="arrow">→</span>
+                            <span className="new-val">{String(delta.new)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ),
+            };
+          })}
         />
       ) : (
         <p>No audit trail available.</p>
       ),
-    },
-  ];
+    });
+  }
 
   return (
     <Layout className="contract-detail-layout">
@@ -210,24 +251,28 @@ const ContractDetail: React.FC = () => {
               Back
             </Button>
             <h1>{contract.title}</h1>
-            <Tag color={statusColor(contract.status)}>{contract.status.toUpperCase()}</Tag>
+            <Tag color={
+              contract.status === 'active' ? 'green' : 
+              contract.status === 'expired' ? 'red' : 
+              'orange'
+            }>
+              {contract.status.toUpperCase()}
+            </Tag>
           </Space>
           <Space>
             {contract.status === 'draft' && (
-              <>
-                <Button icon={<EditOutlined />} onClick={() => navigate(`/contracts/${id}/edit`)}>
-                  Edit
-                </Button>
-                <Button type="primary" icon={<SendOutlined />} onClick={handleSubmit}>
-                  Submit for Approval
-                </Button>
-              </>
+              <Button type="primary" icon={<SendOutlined />} onClick={handleSubmit}>
+                Submit for Approval
+              </Button>
             )}
+            <Button icon={<EditOutlined />} onClick={() => navigate(`/contracts/${id}/edit`)}>
+              Edit
+            </Button>
           </Space>
         </div>
 
         <Card className="detail-card">
-          <Tabs items={tabItems} />
+          <Tabs items={detailTabs} />
         </Card>
       </Content>
     </Layout>

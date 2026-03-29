@@ -33,9 +33,17 @@ def get_contract_approvals(
     approvals, total = WorkflowService.get_contract_approvals(
         db, contract_id=contract_id, skip=skip, limit=limit
     )
+    items = []
+    for a in approvals:
+        resp = ApprovalResponse.model_validate(a)
+        if a.contract:
+            resp.contract_title = a.contract.title
+            resp.contract_number = a.contract.contract_number
+        items.append(resp)
+
     return {
         "total": total, "skip": skip, "limit": limit, "contract_id": contract_id,
-        "items": [ApprovalResponse.model_validate(a) for a in approvals]
+        "items": items
     }
 
 
@@ -50,9 +58,17 @@ def get_pending_approvals(
     approvals, total = WorkflowService.get_pending_approvals_for_user(
         db, approver_id=current_user.id, skip=skip, limit=limit
     )
+    items = []
+    for a in approvals:
+        resp = ApprovalResponse.model_validate(a)
+        if a.contract:
+            resp.contract_title = a.contract.title
+            resp.contract_number = a.contract.contract_number
+        items.append(resp)
+
     return {
         "total": total, "skip": skip, "limit": limit,
-        "items": [ApprovalResponse.model_validate(a) for a in approvals]
+        "items": items
     }
 
 

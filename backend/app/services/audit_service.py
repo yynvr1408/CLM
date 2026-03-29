@@ -1,14 +1,23 @@
-"""Audit logging service."""
+"""Audit and integrity service for tamper-proof logging."""
+import json
+import hashlib
+from typing import Optional, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
-from app.models.models import AuditLog
-from typing import List, Tuple, Dict, Any, Optional
-from datetime import datetime, timedelta
-
+from sqlalchemy import desc, and_, between
+from app.models.models import AuditLog, utcnow
+from datetime import date, datetime, timedelta
+from typing import List, Tuple, Dict
 
 class AuditService:
-    """Service for audit logging and compliance."""
-    
+    """Service for managing secure audit logs."""
+
+    @staticmethod
+    def _calculate_hash(data: dict) -> str:
+        """Calculate SHA-256 hash of a dictionary."""
+        # Ensure consistent ordering for hashing
+        encoded = json.dumps(data, sort_keys=True, default=str).encode()
+        return hashlib.sha256(encoded).hexdigest()
+
     @staticmethod
     def log_action(
         db: Session,
@@ -17,28 +26,100 @@ class AuditService:
         resource_type: str,
         resource_id: Optional[int] = None,
         contract_id: Optional[int] = None,
-        changes: Optional[Dict[str, Any]] = None,
+        clause_id: Optional[int] = None,
+        changes: Optional[dict] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None
     ) -> AuditLog:
-        """Create an audit log entry."""
-        audit = AuditLog(
+        """Create a new tamper-proof audit log entry."""
+        # Get the previous record to link the chain
+        last_log = db.query(AuditLog).order_by(desc(AuditLog.id)).first()
+        previous_hash = last_log.entry_hash if last_log else None
+
+        # Prepare base data for this entry
+        log_data = {
+            "user_id": user_id,
+            "action": action,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "contract_id": contract_id,
+            "clause_id": clause_id,
+            "changes": changes,
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "previous_hash": previous_hash
+        }
+
+        # Calculate this entry's hash
+        entry_hash = AuditService._calculate_hash(log_data)
+
+        # Create record
+        new_log = AuditLog(
             user_id=user_id,
-            contract_id=contract_id,
             action=action,
             resource_type=resource_type,
             resource_id=resource_id,
+            contract_id=contract_id,
+            clause_id=clause_id,
             changes=changes,
             ip_address=ip_address,
-            user_agent=user_agent
+            user_agent=user_agent,
+            previous_hash=previous_hash,
+            entry_hash=entry_hash
         )
-        
-        db.add(audit)
+
+        db.add(new_log)
         db.commit()
-        db.refresh(audit)
+        db.refresh(new_log)
         
-        return audit
-    
+        return new_log
+
+    @staticmethod
+    def verify_chain(db: Session) -> dict:
+        """Verify the integrity of the audit log chain."""
+        logs = db.query(AuditLog).order_by(AuditLog.id).all()
+        
+        is_valid = True
+        broken_id = None
+        
+        previous_hash = None
+        for log in logs:
+            # 1. Check if previous_hash matches
+            if log.previous_hash != previous_hash:
+                is_valid = False
+                broken_id = log.id
+                break
+            
+            # 2. Recalculate hash (excluding the hash itself and ID)
+            current_log_data = {
+                "user_id": log.user_id,
+                "action": log.action,
+                "resource_type": log.resource_type,
+                "resource_id": log.resource_id,
+                "contract_id": log.contract_id,
+                "clause_id": log.clause_id,
+                "changes": log.changes,
+                "ip_address": log.ip_address,
+                "user_agent": log.user_agent,
+                "previous_hash": log.previous_hash
+            }
+            
+            recalculated_hash = AuditService._calculate_hash(current_log_data)
+            
+            # 3. Verify entry hash
+            if recalculated_hash != log.entry_hash:
+                is_valid = False
+                broken_id = log.id
+                break
+            
+            previous_hash = log.entry_hash
+            
+        return {
+            "is_valid": is_valid,
+            "broken_id": broken_id,
+            "total_logs": len(logs)
+        }
+
     @staticmethod
     def get_audit_logs(
         db: Session,
@@ -46,12 +127,10 @@ class AuditService:
         contract_id: Optional[int] = None,
         action: Optional[str] = None,
         resource_type: Optional[str] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
         skip: int = 0,
         limit: int = 50
     ) -> Tuple[List[AuditLog], int]:
-        """Get audit logs with filtering."""
+        """Get paginated audit logs with filtering."""
         query = db.query(AuditLog)
         
         if user_id:
@@ -62,16 +141,12 @@ class AuditService:
             query = query.filter(AuditLog.action == action)
         if resource_type:
             query = query.filter(AuditLog.resource_type == resource_type)
-        if start_date:
-            query = query.filter(AuditLog.created_at >= start_date)
-        if end_date:
-            query = query.filter(AuditLog.created_at <= end_date)
-        
+            
         total = query.count()
         logs = query.order_by(desc(AuditLog.created_at)).offset(skip).limit(limit).all()
         
         return logs, total
-    
+
     @staticmethod
     def get_contract_audit_trail(
         db: Session,
@@ -81,12 +156,10 @@ class AuditService:
     ) -> Tuple[List[AuditLog], int]:
         """Get complete audit trail for a contract."""
         query = db.query(AuditLog).filter(AuditLog.contract_id == contract_id)
-        
         total = query.count()
         logs = query.order_by(desc(AuditLog.created_at)).offset(skip).limit(limit).all()
-        
         return logs, total
-    
+
     @staticmethod
     def get_user_activity(
         db: Session,
@@ -95,38 +168,31 @@ class AuditService:
         skip: int = 0,
         limit: int = 50
     ) -> Tuple[List[AuditLog], int]:
-        """Get user activity for last N days."""
-        start_date = datetime.utcnow() - timedelta(days=days)
-        
+        """Get recent activity for a specific user."""
+        start_date = datetime.now() - timedelta(days=days)
         query = db.query(AuditLog).filter(
             and_(
                 AuditLog.user_id == user_id,
                 AuditLog.created_at >= start_date
             )
         )
-        
         total = query.count()
         logs = query.order_by(desc(AuditLog.created_at)).offset(skip).limit(limit).all()
-        
         return logs, total
-    
+
     @staticmethod
-    def export_audit_trail(
-        db: Session,
-        contract_id: int
-    ) -> List[Dict]:
-        """Export contract audit trail as list of dicts."""
-        logs, _ = AuditService.get_contract_audit_trail(db, contract_id, limit=10000)
+    def export_audit_trail(db: Session, contract_id: int) -> List[Dict[str, Any]]:
+        """Export simplified audit trail for external reporting."""
+        logs = db.query(AuditLog).filter(AuditLog.contract_id == contract_id).order_by(AuditLog.created_at).all()
         
-        return [
-            {
-                "id": log.id,
-                "user_id": log.user_id,
+        export_data = []
+        for log in logs:
+            export_data.append({
+                "timestamp": log.created_at.isoformat(),
+                "user": log.user.full_name if log.user else f"User {log.user_id}",
                 "action": log.action,
-                "resource_type": log.resource_type,
+                "resource": log.resource_type,
                 "changes": log.changes,
-                "created_at": log.created_at.isoformat(),
-                "ip_address": log.ip_address
-            }
-            for log in logs
-        ]
+                "hash": log.entry_hash
+            })
+        return export_data

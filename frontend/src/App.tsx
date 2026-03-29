@@ -21,7 +21,9 @@ import Approvals from './pages/Approvals';
 import Renewals from './pages/Renewals';
 import AuditLogs from './pages/AuditLogs';
 import Templates from './pages/Templates';
+import TemplateForm from './pages/TemplateForm';
 import AdminUsers from './pages/AdminUsers';
+
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -59,7 +61,10 @@ function App() {
             <Route path="/renewals" element={<Renewals />} />
             <Route path="/audit" element={<AuditLogs />} />
             <Route path="/templates" element={<Templates />} />
+            <Route path="/templates/new" element={<TemplateForm />} />
+            <Route path="/templates/:id/edit" element={<TemplateForm />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+
           </Route>
 
           {/* Default redirect */}

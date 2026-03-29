@@ -7,6 +7,7 @@ from app.models.models import (
 )
 from app.schemas.schemas import ContractCreate, ContractUpdate
 from app.core.security import sanitize_search_input, compute_audit_hash
+from app.services.audit_service import AuditService
 from fastapi import HTTPException, status
 from datetime import datetime, timezone, date, timedelta
 import uuid
@@ -82,14 +83,11 @@ class ContractService:
         db.add(version)
 
         # Audit log
-        audit = AuditLog(
-            user_id=owner_id,
-            contract_id=new_contract.id,
-            action="CREATE",
-            resource_type="contract",
-            resource_id=new_contract.id,
+        AuditService.log_action(
+            db, user_id=owner_id, action="CREATE",
+            resource_type="contract", resource_id=new_contract.id,
+            contract_id=new_contract.id
         )
-        db.add(audit)
 
         db.commit()
         db.refresh(new_contract)
@@ -165,15 +163,12 @@ class ContractService:
         db.add(version)
 
         # Audit log
-        audit = AuditLog(
-            user_id=user_id,
+        AuditService.log_action(
+            db, user_id=user_id, action="UPDATE",
+            resource_type="contract", resource_id=contract_id,
             contract_id=contract_id,
-            action="UPDATE",
-            resource_type="contract",
-            resource_id=contract_id,
             changes=changes
         )
-        db.add(audit)
 
         db.commit()
         db.refresh(contract)
@@ -220,6 +215,9 @@ class ContractService:
     @staticmethod
     def submit_contract(db: Session, contract_id: int, user_id: int) -> Contract:
         """Submit contract for approval."""
+        from app.services.workflow_service import WorkflowService
+        from app.models.models import User, Role, ContractTemplate
+
         contract = ContractService.get_contract(db, contract_id)
 
         if contract.status != "draft":
@@ -230,14 +228,47 @@ class ContractService:
 
         contract.status = "submitted"
 
-        audit = AuditLog(
-            user_id=user_id,
-            contract_id=contract_id,
-            action="SUBMIT",
-            resource_type="contract",
-            resource_id=contract_id
+        # Check for workflow in template
+        approver_id = None
+        if contract.template_id:
+            template = db.query(ContractTemplate).filter(ContractTemplate.id == contract.template_id).first()
+            if template and template.approval_workflow:
+                # For now, just pick the first approver in the list
+                # Assuming approval_workflow is a list of {role: string, level: int} or similar
+                # We need a user with that role.
+                pass
+
+        # If no specific approver, find any admin in the organization
+        if not approver_id:
+            admin_role = db.query(Role).filter(Role.name == "admin").first()
+            admin_user = db.query(User).filter(
+                User.organization_id == contract.organization_id,
+                User.role_id == admin_role.id if admin_role else User.role_id,
+                User.is_active == True
+            ).first()
+
+            if admin_user:
+                approver_id = admin_user.id
+            else:
+                # Default to a superuser if no admin found
+                superuser = db.query(User).filter(User.is_superuser == True).first()
+                approver_id = superuser.id if superuser else user_id
+
+        # Create approval record
+        from app.schemas.schemas import ApprovalCreate
+        approval_data = ApprovalCreate(
+            approver_id=approver_id,
+            approval_level=1,
+            comments="Automatic system assigned approval on contract submission."
         )
-        db.add(audit)
+        WorkflowService.create_approval(db, contract_id, approval_data)
+
+        # Audit log
+        AuditService.log_action(
+            db, user_id=user_id, action="SUBMIT",
+            resource_type="contract", resource_id=contract_id,
+            contract_id=contract_id
+        )
 
         db.commit()
         db.refresh(contract)

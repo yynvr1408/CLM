@@ -3,6 +3,8 @@ import { Layout, Form, Input, Select, Button, Card, message, Spin, Space } from 
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiService from '../services/api';
+import { Attachment } from '../types';
+import FileUploader from '../components/FileUploader';
 import './ClauseForm.css';
 
 const { Content } = Layout;
@@ -25,6 +27,8 @@ const ClauseForm: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+
 
   useEffect(() => {
     if (isEdit && id) {
@@ -41,6 +45,7 @@ const ClauseForm: React.FC = () => {
         content: data.content,
         category: data.category,
       });
+      setAttachments(data.attachments || []);
     } catch (error: any) {
       message.error('Failed to load clause');
       navigate('/clauses');
@@ -131,7 +136,17 @@ const ClauseForm: React.FC = () => {
                 placeholder="Enter the full clause text..."
               />
             </Form.Item>
+
+            {isEdit && (
+              <FileUploader
+                parentId={{ clause_id: parseInt(id!) }}
+                existingAttachments={attachments}
+                onUploadSuccess={(att) => setAttachments(prev => [...prev, att])}
+                onDeleteSuccess={(attId) => setAttachments(prev => prev.filter(a => a.id !== attId))}
+              />
+            )}
           </Form>
+
         </Card>
       </Content>
     </Layout>

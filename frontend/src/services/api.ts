@@ -2,8 +2,10 @@
  * API Service for CLM Platform v2.0
  */
 import {
-  AuthToken, Contract, Clause, Approval, Renewal, User,
-  Tag, ContractTemplate, Comment, Role, DashboardStats,
+  AuthToken, User, ClauseResponse, ClauseVersionResponse,
+  AuditLogResponse, IntegrityStatus, Role, Contract,
+  DashboardStats, Clause, ContractTemplate, Tag,
+  Approval, Renewal
 } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
@@ -11,12 +13,13 @@ const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
 class ApiService {
   private token: string | null = localStorage.getItem("access_token");
 
-  private getHeaders(): HeadersInit {
+  private getHeaders(isFormData = false): HeadersInit {
     return {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(this.token && { Authorization: `Bearer ${this.token}` }),
     };
   }
+
 
   private async request<T>(
     endpoint: string,
@@ -27,10 +30,11 @@ class ApiService {
     const response = await fetch(url, {
       ...options,
       headers: {
-        ...this.getHeaders(),
+        ...this.getHeaders(options.body instanceof FormData),
         ...(options.headers || {}),
       },
     });
+
 
     let data: any = null;
 
@@ -411,18 +415,28 @@ class ApiService {
   }
 
   // ═══════════════════════════════════════════════════════
-  // Audit endpoints
+  // History & Audit
   // ═══════════════════════════════════════════════════════
-  async getAuditLogs(skip = 0, limit = 50, contractId?: number): Promise<any> {
-    const params = new URLSearchParams();
-    params.append("skip", skip.toString());
-    params.append("limit", limit.toString());
-    if (contractId) params.append("contract_id", contractId.toString());
-    return this.request(`/audit/logs?${params}`);
+  async getContractHistory(contractId: number): Promise<AuditLogResponse[]> {
+    return this.request(`/history/contract/${contractId}`);
   }
 
-  async getContractAuditTrail(contractId: number): Promise<any> {
-    return this.request(`/audit/trail/${contractId}`);
+  async getClauseVersions(clauseId: number): Promise<ClauseVersionResponse[]> {
+    return this.request(`/history/clause/${clauseId}/versions`);
+  }
+
+  async restoreClauseVersion(clauseId: number, versionId: number): Promise<ClauseResponse> {
+    return this.request(`/history/clause/${clauseId}/restore/${versionId}`, {
+      method: "POST"
+    });
+  }
+
+  async checkAuditIntegrity(): Promise<IntegrityStatus> {
+    return this.request("/history/integrity");
+  }
+
+  async getAuditLogs(params: URLSearchParams): Promise<any> {
+    return this.request(`/audit/logs?${params}`);
   }
 
   // ═══════════════════════════════════════════════════════
@@ -442,6 +456,33 @@ class ApiService {
   getToken(): string | null {
     return this.token;
   }
+
+  // ═══════════════════════════════════════════════════════
+  // Attachment endpoints
+  // ═══════════════════════════════════════════════════════
+  async uploadAttachment(
+    file: File, 
+    parentId?: { contract_id?: number; clause_id?: number; template_id?: number }
+  ): Promise<any> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (parentId?.contract_id) formData.append("contract_id", parentId.contract_id.toString());
+    if (parentId?.clause_id) formData.append("clause_id", parentId.clause_id.toString());
+    if (parentId?.template_id) formData.append("template_id", parentId.template_id.toString());
+
+    return this.request("/attachments/upload", {
+      method: "POST",
+      body: formData,
+      headers: {
+        // Headers here shouldn't include Content-Type as fetch handles it for FormData
+      },
+    });
+  }
+
+  async deleteAttachment(id: number): Promise<void> {
+    return this.request(`/attachments/${id}`, { method: "DELETE" });
+  }
 }
+
 
 export default new ApiService();

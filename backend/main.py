@@ -13,12 +13,16 @@ from app.core.security import hash_password
 from app.core.middleware import SecurityHeadersMiddleware, RequestLoggingMiddleware
 from app.database.session import engine, SessionLocal
 from app.models.models import (
-    Base, Role, User, Organization, ROLE_TEMPLATES
+    Base, Role, User, Organization, ROLE_TEMPLATES,
+    Clause, Contract, ContractTemplate, Approval, Renewal, utcnow
 )
+from datetime import date, timedelta
+
 from app.api.v1.endpoints import (
     auth, contracts, clauses, approvals, renewals, audit,
-    templates, comments, tags, notifications,
+    templates, comments, tags, notifications, attachments, history,
 )
+
 
 
 @asynccontextmanager
@@ -93,7 +97,105 @@ async def lifespan(app: FastAPI):
                 admin_user.is_approved = True
                 db.commit()
 
+        # ------- Seed IT Acts & Laws Infrastructure (Clauses) -----
+        it_clause = db.query(Clause).filter(Clause.title == "IT Act Compliance").first()
+        if not it_clause:
+            it_clause = Clause(
+                title="IT Act Compliance",
+                content="Standard placeholder for IT Act compliance requirements.",
+                category="IT Acts & Laws",
+                organization_id=default_org.id,
+                created_by_id=admin_user.id
+            )
+            db.add(it_clause)
+            db.commit()
+            db.refresh(it_clause)
+            print("[OK] Seeded IT Act Compliance clause.")
+
+        # ------- Seed Sample Template -----------------------------
+        sample_template = db.query(ContractTemplate).filter(ContractTemplate.name == "Standard Service Agreement").first()
+        if not sample_template:
+            sample_template = ContractTemplate(
+                name="Standard Service Agreement",
+                description="General service agreement with IT compliance.",
+                contract_type="Service Agreement",
+                organization_id=default_org.id,
+                created_by_id=admin_user.id
+            )
+            db.add(sample_template)
+            db.commit()
+            db.refresh(sample_template)
+            print("[OK] Seeded sample template.")
+
+        # ------- Seed Sample Data for Approvals/Renewals ---------
+        # Only seed if no contracts exist
+        if db.query(Contract).count() == 0:
+            sample_contract = Contract(
+                title="Sample Cloud Services Agreement",
+                contract_number="CNT-SAMPLE-001",
+                contract_type="Service Agreement",
+                status="submitted",
+                owner_id=admin_user.id,
+                organization_id=default_org.id,
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=365),
+                value=500000, # $5,000.00
+            )
+            db.add(sample_contract)
+            db.commit()
+            db.refresh(sample_contract)
+
+            # Add pending approval
+            approval = Approval(
+                contract_id=sample_contract.id,
+                approver_id=admin_user.id,
+                approval_level=1,
+                status="pending"
+            )
+            db.add(approval)
+
+            # Add upcoming renewal
+            renewal = Renewal(
+                contract_id=sample_contract.id,
+                renewal_date=sample_contract.end_date,
+                alert_date=sample_contract.end_date - timedelta(days=30),
+                status="pending"
+            )
+            db.add(renewal)
+            db.commit()
+            print("[OK] Seeded sample contract, approval, and renewal data.")
+
+        # ------- Heal missing Approval records for existing submitted contracts ---
+        submitted_without_approvals = db.query(Contract).filter(
+            Contract.status == "submitted"
+        ).all()
+        
+        for c in submitted_without_approvals:
+            # Check if approval exists
+            existing_app = db.query(Approval).filter(Approval.contract_id == c.id).first()
+            if not existing_app:
+                # Find default admin or superuser
+                admin_role = db.query(Role).filter(Role.name == "admin").first()
+                admin_user = db.query(User).filter(
+                    User.organization_id == c.organization_id,
+                    User.role_id == admin_role.id if admin_role else User.role_id
+                ).first()
+                approver_id = admin_user.id if admin_user else 1 # fallback to ID 1 (default admin)
+                
+                new_app = Approval(
+                    contract_id=c.id,
+                    approver_id=approver_id,
+                    approval_level=1,
+                    status="pending",
+                    comments="Healed: Automatically created missing approval for existing submitted contract."
+                )
+                db.add(new_app)
+                print(f"[FIX] Created missing approval for Contract {c.contract_number}")
+        
+        db.commit()
+
         # Final commit to ensure all read-only transactions are finalized
+
         db.commit()
         print("[OK] Database initialization complete.")
     except Exception as e:
@@ -163,6 +265,9 @@ api_v1.include_router(templates.router)
 api_v1.include_router(comments.router)
 api_v1.include_router(tags.router)
 api_v1.include_router(notifications.router)
+api_v1.include_router(attachments.router, prefix="/attachments", tags=["attachments"])
+api_v1.include_router(history.router)
+
 
 # Mount in main app
 app.include_router(api_v1)

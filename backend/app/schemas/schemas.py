@@ -192,6 +192,26 @@ class TagResponse(TagBase):
 
 
 # ═══════════════════════════════════════════════════════════════
+# Attachment Schemas
+# ═══════════════════════════════════════════════════════════════
+class AttachmentBase(BaseModel):
+    filename: str
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+
+
+class AttachmentResponse(AttachmentBase):
+    id: int
+    file_path: str
+    uploaded_by_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+
+# ═══════════════════════════════════════════════════════════════
 # Clause Schemas
 # ═══════════════════════════════════════════════════════════════
 class ClauseBase(BaseModel):
@@ -216,6 +236,21 @@ class ClauseResponse(ClauseBase):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    attachments: List[AttachmentResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ClauseVersionResponse(BaseModel):
+    id: int
+    clause_id: int
+    version_number: int
+    title: str
+    content: str
+    category: str
+    created_by_id: int
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -269,8 +304,10 @@ class ContractResponse(ContractBase):
     created_at: datetime
     updated_at: datetime
     executed_at: Optional[datetime] = None
+    attachments: List[AttachmentResponse] = []
 
     class Config:
+
         from_attributes = True
 
 
@@ -335,8 +372,10 @@ class ContractTemplateResponse(ContractTemplateBase):
     created_at: datetime
     updated_at: datetime
     clauses: List[ClauseResponse] = []
+    attachments: List[AttachmentResponse] = []
 
     class Config:
+
         from_attributes = True
 
 
@@ -414,9 +453,12 @@ class ApprovalResponse(BaseModel):
     approver_id: int
     approval_level: int
     status: str
-    comments: Optional[str]
-    approved_at: Optional[datetime]
+    comments: Optional[str] = None
+    approved_at: Optional[datetime] = None
     created_at: datetime
+    # Nested info for UI
+    contract_title: Optional[str] = None
+    contract_number: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -542,3 +584,31 @@ class DashboardStats(BaseModel):
     contracts_expiring_30d: int = 0
     contracts_expiring_60d: int = 0
     contracts_expiring_90d: int = 0
+
+
+# ═══════════════════════════════════════════════════════════════
+# History & Integrity Schemas
+# ═══════════════════════════════════════════════════════════════
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: int
+    action: str
+    resource_type: str
+    resource_id: Optional[int] = None
+    contract_id: Optional[int] = None
+    clause_id: Optional[int] = None
+    changes: Optional[Dict[str, Any]] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    created_at: datetime
+    # User info
+    user_full_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class IntegrityStatus(BaseModel):
+    is_valid: bool
+    broken_id: Optional[int] = None
+    total_logs: int

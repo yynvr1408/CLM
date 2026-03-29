@@ -197,6 +197,7 @@ class User(Base):
     contracts = relationship("Contract", back_populates="owner", foreign_keys="[Contract.owner_id]")
     approvals = relationship("Approval", back_populates="approver")
     audit_logs = relationship("AuditLog", back_populates="user")
+    clause_versions = relationship("ClauseVersion", back_populates="created_by")
     comments = relationship("Comment", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
     api_keys = relationship("APIKey", back_populates="user")
@@ -324,6 +325,8 @@ class Contract(Base):
     audit_logs = relationship("AuditLog", back_populates="contract")
     tags = relationship("ContractTag", back_populates="contract")
     comments = relationship("Comment", back_populates="contract")
+    attachments = relationship("Attachment", back_populates="contract", cascade="all, delete-orphan")
+
 
 
 class ContractVersion(Base):
@@ -368,6 +371,8 @@ class ContractTemplate(Base):
     organization = relationship("Organization", back_populates="templates")
     template_clauses = relationship("TemplateClause", back_populates="template")
     contracts = relationship("Contract", back_populates="template")
+    attachments = relationship("Attachment", back_populates="template", cascade="all, delete-orphan")
+
 
 
 class TemplateClause(Base):
@@ -410,6 +415,10 @@ class Clause(Base):
     organization = relationship("Organization", back_populates="clauses")
     contracts = relationship("ContractClause", back_populates="clause")
     template_clauses = relationship("TemplateClause", back_populates="clause")
+    attachments = relationship("Attachment", back_populates="clause", cascade="all, delete-orphan")
+    versions = relationship("ClauseVersion", back_populates="clause", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="clause")
+
 
 
 class ContractClause(Base):
@@ -428,6 +437,23 @@ class ContractClause(Base):
 
     contract = relationship("Contract", back_populates="clauses")
     clause = relationship("Clause", back_populates="contracts")
+
+
+class ClauseVersion(Base):
+    """Historical versions of clauses."""
+    __tablename__ = "clause_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    clause_id = Column(Integer, ForeignKey("clauses.id"), nullable=False)
+    version_number = Column(Integer, nullable=False)
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String(100), nullable=False)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    clause = relationship("Clause", back_populates="versions")
+    created_by = relationship("User", back_populates="clause_versions")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -520,6 +546,7 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True)
+    clause_id = Column(Integer, ForeignKey("clauses.id"), nullable=True)
     action = Column(String(100), nullable=False)
     resource_type = Column(String(50), nullable=False)
     resource_id = Column(Integer)
@@ -532,3 +559,32 @@ class AuditLog(Base):
 
     user = relationship("User", back_populates="audit_logs")
     contract = relationship("Contract", back_populates="audit_logs")
+    clause = relationship("Clause", back_populates="audit_logs")
+
+
+# ═══════════════════════════════════════════════════════════════
+# Media & Attachments
+# ═══════════════════════════════════════════════════════════════
+class Attachment(Base):
+    """Media files and attachments linked to various entities."""
+    __tablename__ = "attachments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    file_type = Column(String(100))  # mime type
+    file_size = Column(Integer)  # in bytes
+    
+    # Polymorphic-like links (FKs)
+    contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True)
+    clause_id = Column(Integer, ForeignKey("clauses.id"), nullable=True)
+    template_id = Column(Integer, ForeignKey("contract_templates.id"), nullable=True)
+    
+    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    contract = relationship("Contract", back_populates="attachments")
+    clause = relationship("Clause", back_populates="attachments")
+    template = relationship("ContractTemplate", back_populates="attachments")
+    uploader = relationship("User")
+

@@ -140,9 +140,13 @@ def get_contract(
         if ct.tag:
             tag_list.append(TagResponse.model_validate(ct.tag))
 
-    resp = ContractDetailResponse.model_validate(contract)
-    resp.clauses = clause_list
-    resp.tags = tag_list
+    # Construct response manually to avoid Pydantic/SQLAlchemy relationship name conflicts
+    base_data = ContractResponse.model_validate(contract).model_dump()
+    resp = ContractDetailResponse(
+        **base_data,
+        clauses=clause_list,
+        tags=tag_list
+    )
     return resp
 
 

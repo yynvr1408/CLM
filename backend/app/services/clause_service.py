@@ -1,8 +1,9 @@
 """Clause library service."""
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, or_
-from app.models.models import Clause, AuditLog
+from app.models.models import Clause, AuditLog, ClauseVersion
 from app.schemas.schemas import ClauseCreate, ClauseUpdate
+from app.services.audit_service import AuditService
 from fastapi import HTTPException, status
 
 
@@ -29,6 +30,14 @@ class ClauseService:
         db.commit()
         db.refresh(new_clause)
         
+        # Audit log
+        AuditService.log_action(
+            db, user_id=created_by_id, action="CREATE",
+            resource_type="clause", resource_id=new_clause.id,
+            clause_id=new_clause.id,
+            changes={"title": new_clause.title, "category": new_clause.category}
+        )
+        
         return new_clause
     
     @staticmethod
@@ -54,18 +63,38 @@ class ClauseService:
         """Update clause and increment version."""
         clause = ClauseService.get_clause(db, clause_id)
         
-        # Store changes
+        # 1. Create a version record BEFORE updating current
+        old_version = ClauseVersion(
+            clause_id=clause.id,
+            version_number=clause.version,
+            title=clause.title,
+            content=clause.content,
+            category=clause.category,
+            created_by_id=user_id
+        )
+        db.add(old_version)
+        
+        # Store changes for Audit Log
         changes = {}
         
-        # Update fields
+        # 2. Update fields
         for field, value in clause_data.dict(exclude_unset=True).items():
             if value is not None:
                 old_value = getattr(clause, field, None)
-                setattr(clause, field, value)
-                changes[field] = {"old": old_value, "new": value}
+                if old_value != value:
+                    setattr(clause, field, value)
+                    changes[field] = {"old": str(old_value), "new": str(value)}
         
-        # Increment version
+        # 3. Increment version
         clause.version += 1
+        
+        # Audit log
+        AuditService.log_action(
+            db, user_id=user_id, action="UPDATE",
+            resource_type="clause", resource_id=clause_id,
+            clause_id=clause_id,
+            changes=changes
+        )
         
         db.commit()
         db.refresh(clause)
@@ -124,7 +153,64 @@ class ClauseService:
         
         clause.is_active = False
         
+        # Audit log
+        AuditService.log_action(
+            db, user_id=user_id, action="DEACTIVATE",
+            resource_type="clause", resource_id=clause_id,
+            clause_id=clause_id
+        )
+        
         db.commit()
         db.refresh(clause)
         
+        return clause
+
+    @staticmethod
+    def restore_version(db: Session, clause_id: int, version_id: int, user_id: int) -> Clause:
+        """Restore a clause to a previous version."""
+        clause = ClauseService.get_clause(db, clause_id)
+        version_record = db.query(ClauseVersion).filter(
+            ClauseVersion.id == version_id,
+            ClauseVersion.clause_id == clause_id
+        ).first()
+
+        if not version_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Clause version not found"
+            )
+
+        # Before restoring, save CURRENT state as a new version
+        current_historical = ClauseVersion(
+            clause_id=clause.id,
+            version_number=clause.version,
+            title=clause.title,
+            content=clause.content,
+            category=clause.category,
+            created_by_id=user_id
+        )
+        db.add(current_historical)
+
+        # Map back fields
+        changes = {
+            "title": {"old": clause.title, "new": version_record.title},
+            "content": {"old": "Updated (content diff)", "new": "Restored"},
+            "version": {"old": clause.version, "new": clause.version + 1}
+        }
+        
+        clause.title = version_record.title
+        clause.content = version_record.content
+        clause.category = version_record.category
+        clause.version += 1
+
+        # Audit log
+        AuditService.log_action(
+            db, user_id=user_id, action="RESTORE",
+            resource_type="clause", resource_id=clause_id,
+            clause_id=clause_id,
+            changes=changes
+        )
+
+        db.commit()
+        db.refresh(clause)
         return clause

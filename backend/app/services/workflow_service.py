@@ -1,10 +1,9 @@
 """Workflow and approval service."""
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
-from app.models.models import Approval, Contract, AuditLog
+from app.models.models import Approval, Contract, AuditLog, Renewal, utcnow
 from app.schemas.schemas import ApprovalCreate, ApprovalUpdate
-from fastapi import HTTPException, status
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class WorkflowService:
@@ -97,6 +96,23 @@ class WorkflowService:
         
         if all_approved:
             contract.status = "approved"
+            
+            # Create renewal record if end_date exists
+            if contract.end_date:
+                # Alert date is 30 days before end_date by default
+                alert_date = contract.end_date - timedelta(days=30)
+                
+                # Check for existing renewal
+                existing_renewal = db.query(Renewal).filter(Renewal.contract_id == contract.id).first()
+                if not existing_renewal:
+                    new_renewal = Renewal(
+                        contract_id=contract.id,
+                        renewal_date=contract.end_date,
+                        alert_date=alert_date,
+                        status="pending"
+                    )
+                    db.add(new_renewal)
+                    print(f"[OK] Automated renewal record created for Contract {contract.id}")
         
         # Audit log
         audit = AuditLog(

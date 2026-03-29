@@ -1,0 +1,93 @@
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from sqlalchemy.orm import Session
+from typing import List, Optional
+import os
+import uuid
+import shutil
+from app.database.session import get_db
+from app.models.models import Attachment, User
+from app.schemas.schemas import AttachmentResponse
+from app.api.v1.endpoints.auth import get_current_user
+from app.core.config import settings
+
+router = APIRouter()
+
+UPLOAD_DIR = settings.UPLOAD_DIR or "uploads"
+if not os.path.exists(UPLOAD_DIR):
+    os.makedirs(UPLOAD_DIR)
+
+@router.post("/upload", response_model=AttachmentResponse)
+async def upload_file(
+    file: UploadFile = File(...),
+    contract_id: Optional[int] = None,
+    clause_id: Optional[int] = None,
+    template_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    """Upload a file and create an attachment record."""
+    # Create unique filename to prevent collisions
+    file_ext = os.path.splitext(file.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not save file: {str(e)}"
+        )
+
+    # Create DB record
+    db_attachment = Attachment(
+        filename=file.filename,
+        file_path=file_path,
+        file_type=file.content_type,
+        file_size=os.path.getsize(file_path),
+        contract_id=contract_id,
+        clause_id=clause_id,
+        template_id=template_id,
+        uploaded_by_id=current_user.id
+    )
+
+    db.add(db_attachment)
+    db.commit()
+    db.refresh(db_attachment)
+
+    return db_attachment
+
+@router.get("/{attachment_id}", response_model=AttachmentResponse)
+def get_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    """Get attachment metadata."""
+    attachment = db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    return attachment
+
+@router.delete("/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    """Delete an attachment and its physical file."""
+    attachment = db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    # Remove physical file
+    if os.path.exists(attachment.file_path):
+        os.remove(attachment.file_path)
+
+    db.delete(attachment)
+    db.commit()
+    return None

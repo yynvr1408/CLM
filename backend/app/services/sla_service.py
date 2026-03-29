@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
 from app.models.models import Renewal, Contract, AuditLog
 from app.schemas.schemas import RenewalCreate, RenewalUpdate
+from app.services.audit_service import AuditService
 from fastapi import HTTPException, status
 from datetime import date, datetime, timedelta
 from typing import List, Tuple
@@ -136,17 +137,15 @@ class SLAService:
         renewal.status = "renewed"
         renewal.updated_at = datetime.utcnow()
         
-        # Audit log
-        audit = AuditLog(
+        # Unified Secure Audit log
+        AuditService.log_action(
+            db, 
             user_id=user_id,
-            contract_id=contract.id,
             action="RENEW",
             resource_type="renewal",
-            resource_id=renewal_id
+            resource_id=renewal_id,
+            contract_id=contract.id
         )
-        db.add(audit)
-        
-        db.commit()
         db.refresh(renewal)
         
         return renewal
