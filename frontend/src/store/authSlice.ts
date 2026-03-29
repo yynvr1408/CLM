@@ -1,5 +1,5 @@
 /**
- * Auth slice for Redux
+ * Auth slice for Redux — v2.0 with permissions
  */
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
@@ -9,7 +9,12 @@ export interface AuthState {
     email: string;
     username: string;
     full_name: string;
-    role?: string;
+    role_id: number;
+    role_name?: string;
+    permissions: string[];
+    is_superuser: boolean;
+    is_approved: boolean;
+    organization_id?: number;
   };
   token: string | null;
   isLoading: boolean;
@@ -44,6 +49,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
     },
   },
 });

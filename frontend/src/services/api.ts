@@ -1,9 +1,12 @@
 /**
- * API Service for CLM Platform
+ * API Service for CLM Platform v2.0
  */
-import { AuthToken, Contract, Clause, Approval, Renewal, User } from "../types";
+import {
+  AuthToken, Contract, Clause, Approval, Renewal, User,
+  Tag, ContractTemplate, Comment, Role, DashboardStats,
+} from "../types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
 
 class ApiService {
   private token: string | null = localStorage.getItem("access_token");
@@ -38,7 +41,6 @@ class ApiService {
     }
 
     if (!response.ok) {
-      // On 401, clear stale token and redirect to login
       if (response.status === 401) {
         this.token = null;
         localStorage.removeItem("access_token");
@@ -56,12 +58,12 @@ class ApiService {
 
     return data as T;
   }
+
+  // ═══════════════════════════════════════════════════════
   // Auth endpoints
+  // ═══════════════════════════════════════════════════════
   async register(
-    email: string,
-    username: string,
-    password: string,
-    full_name?: string,
+    email: string, username: string, password: string, full_name?: string,
   ): Promise<User> {
     return this.request("/auth/register", {
       method: "POST",
@@ -75,12 +77,16 @@ class ApiService {
       body: JSON.stringify({ email, password }),
     });
     this.setToken(response.access_token);
+    localStorage.setItem("refresh_token", response.refresh_token);
     return response;
   }
 
   async logout(): Promise<void> {
-    await this.request("/auth/logout", { method: "POST" });
-    this.clearToken();
+    try {
+      await this.request("/auth/logout", { method: "POST" });
+    } finally {
+      this.clearToken();
+    }
   }
 
   async getCurrentUser(): Promise<User> {
@@ -90,27 +96,81 @@ class ApiService {
   async refreshToken(refreshToken: string): Promise<AuthToken> {
     return this.request("/auth/refresh", {
       method: "POST",
-      headers: {
-        ...this.getHeaders(),
-        Authorization: `Bearer ${refreshToken}`,
-      },
+      headers: { ...this.getHeaders(), Authorization: `Bearer ${refreshToken}` },
     });
   }
 
-  // Contract endpoints
-  async createContract(data: Partial<Contract>): Promise<Contract> {
-    return this.request("/contracts", {
+  async changePassword(currentPassword: string, newPassword: string): Promise<any> {
+    return this.request("/auth/change-password", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
     });
   }
 
-  async getContracts(
-    skip = 0,
-    limit = 20,
-    status?: string,
-    search?: string,
-  ): Promise<any> {
+  // ═══════════════════════════════════════════════════════
+  // User Management (Admin)
+  // ═══════════════════════════════════════════════════════
+  async getUsers(skip = 0, limit = 50, filters?: Record<string, any>): Promise<any> {
+    const params = new URLSearchParams();
+    params.append("skip", skip.toString());
+    params.append("limit", limit.toString());
+    if (filters?.is_approved !== undefined) params.append("is_approved", filters.is_approved.toString());
+    if (filters?.is_active !== undefined) params.append("is_active", filters.is_active.toString());
+    if (filters?.role_id) params.append("role_id", filters.role_id.toString());
+    return this.request(`/auth/users?${params}`);
+  }
+
+  async approveUser(userId: number): Promise<User> {
+    return this.request(`/auth/users/${userId}/approve`, { method: "POST" });
+  }
+
+  async deactivateUser(userId: number): Promise<User> {
+    return this.request(`/auth/users/${userId}/deactivate`, { method: "POST" });
+  }
+
+  async activateUser(userId: number): Promise<User> {
+    return this.request(`/auth/users/${userId}/activate`, { method: "POST" });
+  }
+
+  async unlockUser(userId: number): Promise<User> {
+    return this.request(`/auth/users/${userId}/unlock`, { method: "POST" });
+  }
+
+  async updateUserRole(userId: number, roleId: number): Promise<User> {
+    return this.request(`/auth/users/${userId}/role?role_id=${roleId}`, { method: "PATCH" });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Role Management
+  // ═══════════════════════════════════════════════════════
+  async getRoles(): Promise<any> {
+    return this.request("/auth/roles");
+  }
+
+  async createRole(data: Partial<Role>): Promise<Role> {
+    return this.request("/auth/roles", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateRole(roleId: number, data: Partial<Role>): Promise<Role> {
+    return this.request(`/auth/roles/${roleId}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async deleteRole(roleId: number): Promise<void> {
+    return this.request(`/auth/roles/${roleId}`, { method: "DELETE" });
+  }
+
+  async getAllPermissions(): Promise<any> {
+    return this.request("/auth/permissions");
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Contract endpoints
+  // ═══════════════════════════════════════════════════════
+  async createContract(data: Partial<Contract>): Promise<Contract> {
+    return this.request("/contracts", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async getContracts(skip = 0, limit = 20, status?: string, search?: string): Promise<any> {
     const params = new URLSearchParams();
     params.append("skip", skip.toString());
     params.append("limit", limit.toString());
@@ -124,10 +184,7 @@ class ApiService {
   }
 
   async updateContract(id: number, data: Partial<Contract>): Promise<Contract> {
-    return this.request(`/contracts/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
+    return this.request(`/contracts/${id}`, { method: "PATCH", body: JSON.stringify(data) });
   }
 
   async submitContract(id: number): Promise<Contract> {
@@ -138,20 +195,44 @@ class ApiService {
     return this.request(`/contracts/${id}`, { method: "DELETE" });
   }
 
-  // Clause endpoints
-  async createClause(data: Partial<Clause>): Promise<Clause> {
-    return this.request("/clauses", {
+  async restoreContract(id: number): Promise<Contract> {
+    return this.request(`/contracts/${id}/restore`, { method: "POST" });
+  }
+
+  async getContractStats(): Promise<DashboardStats> {
+    return this.request("/contracts/stats");
+  }
+
+  async getExpiringContracts(daysAhead = 30, skip = 0, limit = 20): Promise<any> {
+    const params = new URLSearchParams();
+    params.append("days_ahead", daysAhead.toString());
+    params.append("skip", skip.toString());
+    params.append("limit", limit.toString());
+    return this.request(`/contracts/expiring?${params}`);
+  }
+
+  async bulkUpdateStatus(contractIds: number[], newStatus: string): Promise<any> {
+    return this.request("/contracts/bulk/status", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ contract_ids: contractIds, new_status: newStatus }),
     });
   }
 
-  async getClauses(
-    skip = 0,
-    limit = 20,
-    category?: string,
-    search?: string,
-  ): Promise<any> {
+  async bulkDeleteContracts(contractIds: number[]): Promise<any> {
+    return this.request("/contracts/bulk/delete", {
+      method: "POST",
+      body: JSON.stringify({ contract_ids: contractIds }),
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Clause endpoints
+  // ═══════════════════════════════════════════════════════
+  async createClause(data: Partial<Clause>): Promise<Clause> {
+    return this.request("/clauses", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async getClauses(skip = 0, limit = 20, category?: string, search?: string): Promise<any> {
     const params = new URLSearchParams();
     params.append("skip", skip.toString());
     params.append("limit", limit.toString());
@@ -165,13 +246,113 @@ class ApiService {
   }
 
   async updateClause(id: number, data: Partial<Clause>): Promise<Clause> {
-    return this.request(`/clauses/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
+    return this.request(`/clauses/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Template endpoints
+  // ═══════════════════════════════════════════════════════
+  async createTemplate(data: any): Promise<ContractTemplate> {
+    return this.request("/templates", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async getTemplates(skip = 0, limit = 20, contractType?: string): Promise<any> {
+    const params = new URLSearchParams();
+    params.append("skip", skip.toString());
+    params.append("limit", limit.toString());
+    if (contractType) params.append("contract_type", contractType);
+    return this.request(`/templates?${params}`);
+  }
+
+  async getTemplate(id: number): Promise<ContractTemplate> {
+    return this.request(`/templates/${id}`);
+  }
+
+  async updateTemplate(id: number, data: any): Promise<ContractTemplate> {
+    return this.request(`/templates/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async deleteTemplate(id: number): Promise<void> {
+    return this.request(`/templates/${id}`, { method: "DELETE" });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Comment endpoints
+  // ═══════════════════════════════════════════════════════
+  async createComment(contractId: number, content: string, parentId?: number): Promise<Comment> {
+    return this.request(`/comments/contract/${contractId}`, {
+      method: "POST",
+      body: JSON.stringify({ content, parent_id: parentId }),
     });
   }
 
+  async getComments(contractId: number, skip = 0, limit = 50): Promise<any> {
+    const params = new URLSearchParams();
+    params.append("skip", skip.toString());
+    params.append("limit", limit.toString());
+    return this.request(`/comments/contract/${contractId}?${params}`);
+  }
+
+  async updateComment(commentId: number, data: any): Promise<Comment> {
+    return this.request(`/comments/${commentId}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async deleteComment(commentId: number): Promise<void> {
+    return this.request(`/comments/${commentId}`, { method: "DELETE" });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Tag endpoints
+  // ═══════════════════════════════════════════════════════
+  async createTag(data: { name: string; color?: string }): Promise<Tag> {
+    return this.request("/tags", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async getTags(): Promise<any> {
+    return this.request("/tags");
+  }
+
+  async deleteTag(tagId: number): Promise<void> {
+    return this.request(`/tags/${tagId}`, { method: "DELETE" });
+  }
+
+  async addTagToContract(contractId: number, tagId: number): Promise<any> {
+    return this.request(`/tags/contract/${contractId}/tag/${tagId}`, { method: "POST" });
+  }
+
+  async removeTagFromContract(contractId: number, tagId: number): Promise<void> {
+    return this.request(`/tags/contract/${contractId}/tag/${tagId}`, { method: "DELETE" });
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Notification endpoints
+  // ═══════════════════════════════════════════════════════
+  async getNotifications(unreadOnly = false, skip = 0, limit = 20): Promise<any> {
+    const params = new URLSearchParams();
+    params.append("unread_only", unreadOnly.toString());
+    params.append("skip", skip.toString());
+    params.append("limit", limit.toString());
+    return this.request(`/notifications?${params}`);
+  }
+
+  async getUnreadCount(): Promise<{ unread_count: number }> {
+    return this.request("/notifications/unread-count");
+  }
+
+  async markNotificationsRead(notificationIds?: number[], markAll = false): Promise<any> {
+    return this.request("/notifications/mark-read", {
+      method: "POST",
+      body: JSON.stringify({ notification_ids: notificationIds || [], mark_all: markAll }),
+    });
+  }
+
+  async deleteNotification(id: number): Promise<void> {
+    return this.request(`/notifications/${id}`, { method: "DELETE" });
+  }
+
+  // ═══════════════════════════════════════════════════════
   // Approval endpoints
+  // ═══════════════════════════════════════════════════════
   async createApproval(contractId: number, data: any): Promise<Approval> {
     return this.request("/approvals", {
       method: "POST",
@@ -179,11 +360,7 @@ class ApiService {
     });
   }
 
-  async getContractApprovals(
-    contractId: number,
-    skip = 0,
-    limit = 20,
-  ): Promise<any> {
+  async getContractApprovals(contractId: number, skip = 0, limit = 20): Promise<any> {
     const params = new URLSearchParams();
     params.append("skip", skip.toString());
     params.append("limit", limit.toString());
@@ -197,27 +374,20 @@ class ApiService {
     return this.request(`/approvals/pending?${params}`);
   }
 
-  async approveContract(
-    approvalId: number,
-    comments?: string,
-  ): Promise<Approval> {
+  async approveContract(approvalId: number, comments?: string): Promise<Approval> {
     const params = comments ? `?comments=${encodeURIComponent(comments)}` : "";
-    return this.request(`/approvals/${approvalId}/approve${params}`, {
+    return this.request(`/approvals/${approvalId}/approve${params}`, { method: "POST" });
+  }
+
+  async rejectContract(approvalId: number, comments: string): Promise<Approval> {
+    return this.request(`/approvals/${approvalId}/reject?comments=${encodeURIComponent(comments)}`, {
       method: "POST",
     });
   }
 
-  async rejectContract(
-    approvalId: number,
-    comments: string,
-  ): Promise<Approval> {
-    const params = `?comments=${encodeURIComponent(comments)}`;
-    return this.request(`/approvals/${approvalId}/reject${params}`, {
-      method: "POST",
-    });
-  }
-
+  // ═══════════════════════════════════════════════════════
   // Renewal endpoints
+  // ═══════════════════════════════════════════════════════
   async createRenewal(contractId: number, data: any): Promise<Renewal> {
     return this.request("/renewals", {
       method: "POST",
@@ -225,11 +395,7 @@ class ApiService {
     });
   }
 
-  async getUpcomingRenewals(
-    skip = 0,
-    limit = 20,
-    daysAhead = 30,
-  ): Promise<any> {
+  async getUpcomingRenewals(skip = 0, limit = 20, daysAhead = 30): Promise<any> {
     const params = new URLSearchParams();
     params.append("skip", skip.toString());
     params.append("limit", limit.toString());
@@ -244,7 +410,9 @@ class ApiService {
     return this.request(`/renewals/overdue?${params}`);
   }
 
+  // ═══════════════════════════════════════════════════════
   // Audit endpoints
+  // ═══════════════════════════════════════════════════════
   async getAuditLogs(skip = 0, limit = 50, contractId?: number): Promise<any> {
     const params = new URLSearchParams();
     params.append("skip", skip.toString());
@@ -257,6 +425,9 @@ class ApiService {
     return this.request(`/audit/trail/${contractId}`);
   }
 
+  // ═══════════════════════════════════════════════════════
+  // Token management
+  // ═══════════════════════════════════════════════════════
   setToken(token: string): void {
     this.token = token;
     localStorage.setItem("access_token", token);
@@ -265,6 +436,7 @@ class ApiService {
   clearToken(): void {
     this.token = null;
     localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
   }
 
   getToken(): string | null {

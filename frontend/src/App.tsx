@@ -1,5 +1,5 @@
 /**
- * Main App component with routing
+ * Main App component with routing and RBAC guards
  */
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -20,6 +20,8 @@ import ClauseDetail from './pages/ClauseDetail';
 import Approvals from './pages/Approvals';
 import Renewals from './pages/Renewals';
 import AuditLogs from './pages/AuditLogs';
+import Templates from './pages/Templates';
+import AdminUsers from './pages/AdminUsers';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -56,6 +58,8 @@ function App() {
             <Route path="/approvals" element={<Approvals />} />
             <Route path="/renewals" element={<Renewals />} />
             <Route path="/audit" element={<AuditLogs />} />
+            <Route path="/templates" element={<Templates />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
           </Route>
 
           {/* Default redirect */}

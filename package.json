@@ -4,7 +4,7 @@
   "description": "Contract Lifecycle Management Platform",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && python -m uvicorn main:app --reload --port 8000\"",
+    "dev": "concurrently --kill-others -n frontend,backend -c blue,green \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && python -m uvicorn main:app --reload --port 8000",
     "build": "cd frontend && npm run build",
@@ -12,5 +12,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }

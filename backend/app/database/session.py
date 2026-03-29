@@ -7,7 +7,7 @@ from app.core.config import settings
 # Build engine kwargs based on database type
 _is_sqlite = "sqlite" in settings.DATABASE_URL
 _engine_kwargs: dict = {
-    "echo": settings.DEBUG,
+    "echo": False,
 }
 if _is_sqlite:
     # This block is removed as connect_args is handled separately below
