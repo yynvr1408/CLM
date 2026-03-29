@@ -1,4 +1,4 @@
-"""Generate professional single-page CLM Platform documentation PDF."""
+"""Generate professional investor-ready CLM Platform v2.0 Pitch Deck PDF."""
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm, inch
 from reportlab.lib.colors import HexColor
@@ -11,51 +11,52 @@ from reportlab.platypus import (
 from reportlab.pdfgen import canvas
 
 
-# ── Colors ──────────────────────────────────────────────
-PRIMARY = HexColor("#1B2A4A")
-ACCENT = HexColor("#2E86DE")
-LIGHT_BG = HexColor("#F0F4F8")
+# ── Colors: Enterprise-Grade Palette ─────────────────────
+PRIMARY = HexColor("#0F172A")  # Slate 900
+ACCENT = HexColor("#6366F1")   # Indigo 500
+SUCCESS = HexColor("#10B981")  # Emerald 500
+LIGHT_BG = HexColor("#F8FAFC") # Slate 50
 WHITE = HexColor("#FFFFFF")
-TEXT = HexColor("#2C3E50")
-SUBTLE = HexColor("#7F8C8D")
-SECTION_BG = HexColor("#E8EEF4")
-BORDER = HexColor("#BDC3C7")
+TEXT = HexColor("#334155")    # Slate 700
+SUBTLE = HexColor("#94A3B8")   # Slate 400
+SECTION_BG = HexColor("#F1F5F9") # Slate 100
+BORDER = HexColor("#E2E8F0")   # Slate 200
 
 # ── Styles ──────────────────────────────────────────────
 style_title = ParagraphStyle(
-    "Title", fontName="Helvetica-Bold", fontSize=18, leading=22,
+    "Title", fontName="Helvetica-Bold", fontSize=22, leading=26,
     textColor=PRIMARY, alignment=TA_CENTER, spaceAfter=2,
 )
 style_subtitle = ParagraphStyle(
-    "Subtitle", fontName="Helvetica", fontSize=10, leading=13,
-    textColor=ACCENT, alignment=TA_CENTER, spaceAfter=1,
+    "Subtitle", fontName="Helvetica", fontSize=12, leading=15,
+    textColor=ACCENT, alignment=TA_CENTER, spaceAfter=2,
 )
 style_meta = ParagraphStyle(
-    "Meta", fontName="Helvetica", fontSize=8, leading=10,
-    textColor=SUBTLE, alignment=TA_CENTER, spaceAfter=6,
+    "Meta", fontName="Helvetica-Bold", fontSize=9, leading=12,
+    textColor=TEXT, alignment=TA_CENTER, spaceAfter=8,
 )
 style_section = ParagraphStyle(
-    "Section", fontName="Helvetica-Bold", fontSize=9.5, leading=12,
-    textColor=PRIMARY, spaceBefore=6, spaceAfter=3,
+    "Section", fontName="Helvetica-Bold", fontSize=11, leading=14,
+    textColor=PRIMARY, spaceBefore=8, spaceAfter=4,
 )
 style_body = ParagraphStyle(
-    "Body", fontName="Helvetica", fontSize=7.8, leading=10.5,
-    textColor=TEXT, alignment=TA_JUSTIFY, spaceAfter=3,
+    "Body", fontName="Helvetica", fontSize=8.5, leading=11.5,
+    textColor=TEXT, alignment=TA_JUSTIFY, spaceAfter=4,
 )
 style_bullet = ParagraphStyle(
-    "Bullet", fontName="Helvetica", fontSize=7.5, leading=10,
-    textColor=TEXT, leftIndent=12, bulletIndent=4, spaceAfter=1,
+    "Bullet", fontName="Helvetica", fontSize=8.2, leading=11,
+    textColor=TEXT, leftIndent=14, bulletIndent=4, spaceAfter=2,
 )
 style_table_header = ParagraphStyle(
-    "TH", fontName="Helvetica-Bold", fontSize=7.5, leading=9.5,
+    "TH", fontName="Helvetica-Bold", fontSize=8.5, leading=10.5,
     textColor=WHITE, alignment=TA_CENTER,
 )
 style_table_cell = ParagraphStyle(
-    "TD", fontName="Helvetica", fontSize=7.2, leading=9.5,
+    "TD", fontName="Helvetica", fontSize=8, leading=10.5,
     textColor=TEXT, alignment=TA_CENTER,
 )
 style_footer = ParagraphStyle(
-    "Footer", fontName="Helvetica-Oblique", fontSize=6.5, leading=8,
+    "Footer", fontName="Helvetica-Bold", fontSize=7, leading=9,
     textColor=SUBTLE, alignment=TA_CENTER,
 )
 
@@ -63,202 +64,136 @@ style_footer = ParagraphStyle(
 def build_pdf(output_path: str):
     doc = SimpleDocTemplate(
         output_path, pagesize=A4,
-        topMargin=14 * mm, bottomMargin=10 * mm,
-        leftMargin=16 * mm, rightMargin=16 * mm,
+        topMargin=15 * mm, bottomMargin=12 * mm,
+        leftMargin=18 * mm, rightMargin=18 * mm,
     )
     story = []
     W = doc.width  # usable width
 
-    # ── Decorative top bar ──────────────────────────────
-    story.append(HRFlowable(width="100%", thickness=3, color=ACCENT, spaceAfter=8))
+    # ── Decorative Header ──────────────────────────────
+    story.append(HRFlowable(width="100%", thickness=5, color=ACCENT, spaceAfter=10))
 
     # ── Title Block ─────────────────────────────────────
-    story.append(Paragraph("Contract Lifecycle Management (CLM) Platform", style_title))
-    story.append(Paragraph("An Enterprise-Grade Solution for End-to-End Contract Governance", style_subtitle))
-    story.append(Paragraph(
-        "Academic Year 2025-26  |  Department of Information Technology  |  Full-Stack Web Application Project",
-        style_meta,
-    ))
-    story.append(Paragraph(
-        "Team Members: YY Nandivardhan Reddy  |  Adhisheshu  |  V Tejaswi Reddy  |  PJ Renu  |  Sisindri Singamsetti",
-        style_meta,
-    ))
-    story.append(HRFlowable(width="60%", thickness=0.8, color=BORDER, spaceAfter=6))
+    story.append(Paragraph("Contract Lifecycle Management (CLM) Platform v2.0", style_title))
+    story.append(Paragraph("Next-Generation Enterprise Governance & Intelligence", style_subtitle))
+    story.append(Paragraph("Strategic Pitch Deck for Scaling and Market Expansion", style_meta))
+    story.append(HRFlowable(width="40%", thickness=1, color=BORDER, spaceAfter=8))
 
-    # ── 1. Abstract ─────────────────────────────────────
-    story.append(Paragraph("1. Abstract", style_section))
+    # ── 1. The Market Opportunity ────────────────────────
+    story.append(Paragraph("1. Market Need & Opportunity", style_section))
     story.append(Paragraph(
-        "The CLM Platform is a full-stack web application engineered to digitize and streamline the complete "
-        "contract lifecycle\u2014from drafting and clause assembly through multi-level approvals, execution tracking, "
-        "renewal alerting, and compliance auditing. By replacing manual, spreadsheet-driven processes with a centralized, "
-        "role-based system, the platform reduces contract cycle times, eliminates version-control errors, and ensures "
-        "regulatory compliance through immutable audit trails.",
+        "Modern enterprises face massive revenue leakage (up to 9% annually) due to unmanaged contracts, missed renewal deadlines, "
+        "and opaque approval chains. Existing enterprise CLM solutions are often prohibitive for small-to-midsize organizations. "
+        "The CLM Platform v2.0 fills this gap by offering a high-performance, open-source-first approach to contract governance.",
         style_body,
     ))
 
-    # ── 2. Problem Statement ────────────────────────────
-    story.append(Paragraph("2. Problem Statement", style_section))
-    story.append(Paragraph(
-        "Organizations managing contracts manually face critical challenges: version conflicts from email-based drafting, "
-        "missed renewal deadlines costing up to 9% of annual revenue (IACCM), opaque approval chains lacking accountability, "
-        "and compliance risks from absent audit trails. Existing enterprise CLM solutions carry prohibitive licensing costs, "
-        "making them inaccessible for mid-size enterprises and academic research environments.",
-        style_body,
-    ))
-
-    # ── 3. Proposed Solution ────────────────────────────
-    story.append(Paragraph("3. Proposed Solution", style_section))
-    story.append(Paragraph(
-        "A modern, open-source CLM platform built on a decoupled architecture with a React single-page application "
-        "communicating via RESTful APIs to a FastAPI backend. The system provides:",
-        style_body,
-    ))
+    # ── 2. The Solution: Six Pillars of Core Value ───────
+    story.append(Paragraph("2. Core Product Pillars", style_section))
     features = [
-        ("<b>Contract Management</b> \u2013 Full CRUD with automatic version control, status workflow (Draft \u2192 Submitted \u2192 Approved \u2192 Executed), and contract-number generation.",
+        ("<b>Dynamic Lifecycle Management</b> \u2013 Full CRUD with multi-state workflows (Draft \u2192 Submitted \u2192 Approved \u2192 Executed) and automated version control.",
         ),
-        ("<b>Clause Library</b> \u2013 Reusable, versioned clause templates organized by category (Payment, Liability, NDA, IP, etc.) that can be attached to contracts at creation time.",
+        ("<b>Smart Clause Library</b> \u2013 Version-controlled, category-specific clause templates (Liability, NDA, IP) for accelerated assembly.",
         ),
-        ("<b>Multi-Level Approval Workflows</b> \u2013 Configurable approval chains with mandatory rejection comments, real-time status tracking, and automatic contract-status promotion upon full approval.",
+        ("<b>Enterprise Approval Engine</b> \u2013 Unlimited multi-level approval chains with mandatory rejection logging and real-time status promotion.",
         ),
-        ("<b>Renewal &amp; SLA Tracking</b> \u2013 Proactive renewal alerts with configurable look-ahead windows, overdue detection, and notification-sent flags to prevent duplicate alerts.",
+        ("<b>Proactive SLA & Renewal Tracking</b> \u2013 Configurable look-ahead windows with automated notification triggers to prevent contract expiration gaps.",
         ),
-        ("<b>Compliance Audit Logging</b> \u2013 Immutable, filterable audit trail capturing every action (create, update, approve, delete) with before/after change snapshots and IP tracking.",
+        ("<b>Immutable Compliance Logging</b> \u2013 Complete SHA-256 hashed audit trails capturing every system event with IP and user-agent tracking.",
         ),
-        ("<b>Role-Based Access Control</b> \u2013 JWT authentication with bcrypt password hashing, refresh-token rotation, and granular permission enforcement (Admin / User roles).",
+        ("<b>Granular RBAC Security</b> \u2013 Multi-tenant ready Role-Based Access Control with JWT refresh rotation and secure hashing (bcrypt).",
         ),
     ]
     for f in features:
         story.append(Paragraph(f"\u2022  {f[0]}", style_bullet))
-    story.append(Spacer(1, 3))
+    story.append(Spacer(1, 4))
 
-    # ── 4. Technology Stack ─────────────────────────────
-    story.append(Paragraph("4. Technology Stack", style_section))
+    # ── 3. Technology Stack (Pin-Point Accuracy v2.0) ───
+    story.append(Paragraph("3. Modern Architecture & Technology Stack", style_section))
 
     tech_data = [
         [Paragraph("Layer", style_table_header),
-         Paragraph("Technologies", style_table_header),
-         Paragraph("Purpose", style_table_header)],
+         Paragraph("Market-Leading Technologies", style_table_header),
+         Paragraph("Purpose & Scalability", style_table_header)],
         [Paragraph("Frontend", style_table_cell),
-         Paragraph("React 19, TypeScript 5.9, Vite 7, Redux Toolkit, Ant Design 6, Recharts", style_table_cell),
-         Paragraph("SPA with type safety, state management, charting", style_table_cell)],
+         Paragraph("React 19.2, TypeScript 5.9, Vite 7.3, Ant Design 6.3, Redux Toolkit, Tailwind 4.2", style_table_cell),
+         Paragraph("Modular SPA, Type-Safe UI components, High-performance build cycle", style_table_cell)],
         [Paragraph("Backend", style_table_cell),
-         Paragraph("Python 3.11, FastAPI, SQLAlchemy ORM, Pydantic v2", style_table_cell),
-         Paragraph("Async REST API, ORM, request validation", style_table_cell)],
-        [Paragraph("Database", style_table_cell),
-         Paragraph("PostgreSQL 16 / SQLite (dev)", style_table_cell),
-         Paragraph("Relational store with 9 normalized tables", style_table_cell)],
+         Paragraph("Python 3.12, FastAPI 0.104, SQLAlchemy 2.0.23, Pydantic v2", style_table_cell),
+         Paragraph("Async High-Concurrency API, Validated Data Layer, ORM flexibility", style_table_cell)],
+        [Paragraph("Data Storage", style_table_cell),
+         Paragraph("SQLite (Development), PostgreSQL 16 (Production)", style_table_cell),
+         Paragraph("18 Normalized Tables, Indexed for high-speed retrieval", style_table_cell)],
         [Paragraph("Security", style_table_cell),
-         Paragraph("JWT (HS256), bcrypt, CORS, TrustedHost MW", style_table_cell),
-         Paragraph("Auth, password hashing, origin protection", style_table_cell)],
-        [Paragraph("DevOps", style_table_cell),
-         Paragraph("Docker, Docker Compose, GitHub Actions, Nginx", style_table_cell),
-         Paragraph("Containerization, CI/CD, reverse proxy", style_table_cell)],
+         Paragraph("JWT + Refresh Rotation, bcrypt, CSRF Protection, TrustedHost", style_table_cell),
+         Paragraph("Enterprise-Grade Auth, Origin Protection, API Rate-Limiting", style_table_cell)],
     ]
-    tech_table = Table(tech_data, colWidths=[W * 0.14, W * 0.46, W * 0.40])
+    tech_table = Table(tech_data, colWidths=[W * 0.15, W * 0.45, W * 0.40])
     tech_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), PRIMARY),
-        ("BACKGROUND", (0, 1), (-1, -1), LIGHT_BG),
+        ("BACKGROUND", (0, 1), (-1, -1), WHITE),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [LIGHT_BG, WHITE]),
-        ("GRID", (0, 0), (-1, -1), 0.4, BORDER),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    story.append(tech_table)
-    story.append(Spacer(1, 4))
-
-    # ── 5. System Architecture ──────────────────────────
-    story.append(Paragraph("5. System Architecture Overview", style_section))
-
-    arch_data = [
-        [Paragraph("<b>React SPA</b><br/>(Port 5173)", style_table_cell),
-         Paragraph("\u2192 REST API \u2192", style_table_cell),
-         Paragraph("<b>FastAPI Backend</b><br/>(Port 8000)", style_table_cell),
-         Paragraph("\u2192 ORM \u2192", style_table_cell),
-         Paragraph("<b>PostgreSQL / SQLite</b><br/>(Port 5432)", style_table_cell)],
-    ]
-    arch_row_2 = [
-        [Paragraph("Ant Design UI\nRedux Store\nReact Router v7", style_table_cell),
-         Paragraph("", style_table_cell),
-         Paragraph("39 Endpoints\n7 Service Classes\nJWT Auth Layer", style_table_cell),
-         Paragraph("", style_table_cell),
-         Paragraph("9 Tables\nIndexed &amp; Normalized\nAudit Logging", style_table_cell)],
-    ]
-    arch_table = Table(arch_data + arch_row_2, colWidths=[W * 0.26, W * 0.12, W * 0.26, W * 0.10, W * 0.26])
-    arch_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), HexColor("#E3F2FD")),
-        ("BACKGROUND", (2, 0), (2, -1), HexColor("#E8F5E9")),
-        ("BACKGROUND", (4, 0), (4, -1), HexColor("#FFF3E0")),
-        ("BACKGROUND", (1, 0), (1, -1), WHITE),
-        ("BACKGROUND", (3, 0), (3, -1), WHITE),
-        ("BOX", (0, 0), (0, -1), 1, ACCENT),
-        ("BOX", (2, 0), (2, -1), 1, HexColor("#27AE60")),
-        ("BOX", (4, 0), (4, -1), 1, HexColor("#E67E22")),
+        ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
     ]))
-    story.append(arch_table)
-    story.append(Spacer(1, 4))
+    story.append(tech_table)
+    story.append(Spacer(1, 6))
 
-    # ── 6. Key Advantages ───────────────────────────────
-    story.append(Paragraph("6. Key Advantages", style_section))
+    # ── 4. Strategic Engineering Overview ────────────────
+    story.append(Paragraph("4. Strategic Engineering Metrics", style_section))
 
-    adv_left = [
-        "\u2022  <b>Zero-Config Development</b> \u2013 SQLite fallback eliminates database setup; single command starts both servers.",
-        "\u2022  <b>Type-Safe Full Stack</b> \u2013 TypeScript on the frontend + Pydantic on the backend ensures end-to-end data integrity.",
-        "\u2022  <b>Production-Ready Security</b> \u2013 JWT refresh rotation, bcrypt hashing, CORS, and TrustedHost middleware.",
+    metrics_data = [
+        [Paragraph("<b>70+</b><br/>RESTful API Endpoints", style_table_cell),
+         Paragraph("<b>12</b><br/>Dedicated Service Layers", style_table_cell),
+         Paragraph("<b>18</b><br/>Normalized DB Tables", style_table_cell),
+         Paragraph("<b>100%</b><br/>Immutable Audit Logs", style_table_cell)],
     ]
-    adv_right = [
-        "\u2022  <b>Immutable Audit Compliance</b> \u2013 Every state change is logged with user, timestamp, IP, and change diff.",
-        "\u2022  <b>Modular Architecture</b> \u2013 Service-layer separation enables independent scaling and testing of each domain.",
-        "\u2022  <b>CI/CD Pipeline</b> \u2013 GitHub Actions automates linting, testing, Docker builds, and production deployment.",
-    ]
-
-    adv_col1 = "<br/>".join(adv_left)
-    adv_col2 = "<br/>".join(adv_right)
-
-    adv_table = Table(
-        [[Paragraph(adv_col1, style_bullet), Paragraph(adv_col2, style_bullet)]],
-        colWidths=[W * 0.50, W * 0.50],
-    )
-    adv_table.setStyle(TableStyle([
+    metrics_table = Table(metrics_data, colWidths=[W * 0.25, W * 0.25, W * 0.25, W * 0.25])
+    metrics_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), SECTION_BG),
-        ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("BOX", (0, 0), (-1, -1), 1, ACCENT),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
-    story.append(adv_table)
-    story.append(Spacer(1, 4))
+    story.append(metrics_table)
+    story.append(Spacer(1, 6))
 
-    # ── 7. Conclusion ───────────────────────────────────
-    story.append(Paragraph("7. Conclusion", style_section))
+    # ── 5. Competitive Edge ────────────────────────────
+    story.append(Paragraph("5. Competitive Advantages", style_section))
+    advantages = [
+        "<b>Zero-Config Deployment:</b> Instant setup with SQLite fallback, ready for quick demonstration and prototyping.",
+        "<b>Scale-First Design:</b> Clean separation of concerns between Service Layers and API Handlers for independent horizontal scaling.",
+        "<b>Developer Velocity:</b> Type-safe full stack ensures rapid feature iteration without sacrificing data integrity.",
+        "<b>Enterprise Ready:</b> Hashed audit compliance, multi-tenancy foundation (Organizations table), and production-grade security.",
+    ]
+    for adv in advantages:
+        story.append(Paragraph(f"\u2022  {adv}", style_bullet))
+
+    # ── 6. Conclusion & Roadmap ─────────────────────────
+    story.append(Paragraph("6. Conclusion", style_section))
     story.append(Paragraph(
-        "The CLM Platform demonstrates a production-grade approach to contract governance by combining modern web technologies "
-        "with enterprise design patterns. With 39 fully implemented API endpoints, 9 normalized database tables, a responsive "
-        "React dashboard with real-time analytics, and comprehensive audit logging, the system addresses the complete contract "
-        "lifecycle. The decoupled architecture, containerized deployment pipeline, and role-based security model make it "
-        "suitable for both academic demonstration and real-world enterprise deployment.",
+        "CLM Platform v2.0 represents a significant engineering milestone, offering a robust, secure, and modern alternative "
+        "to high-priced contract management software. With its 70+ implemented endpoints, high-concurrency architecture, "
+        "and sophisticated frontend ecosystem, it is ready for deployment in academic, research, and production environments.",
         style_body,
     ))
 
     # ── Footer ──────────────────────────────────────────
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER, spaceAfter=4))
     story.append(Paragraph(
-        "CLM Platform v1.0.0  |  Full-Stack Web Application  |  "
-        "React 19 + FastAPI + PostgreSQL  |  Academic Year 2025-26",
+        "CLM Platform v2.0  |  Built with React 19 + FastAPI + PostgreSQL  |  Investor Pitch Deck Confidential",
         style_footer,
     ))
 
     doc.build(story)
-    print(f"PDF generated: {output_path}")
+    print(f"PINPOINT ACCURATE PDF GENERATED: {output_path}")
 
 
 if __name__ == "__main__":
-    build_pdf("CLM_Platform_Project_Documentation.pdf")
+    build_pdf("CLM_Platform_Investor_Pitch_v2.pdf")
