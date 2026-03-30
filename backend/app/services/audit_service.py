@@ -196,3 +196,9 @@ class AuditService:
                 "hash": log.entry_hash
             })
         return export_data
+
+    @staticmethod
+    def get_all_audit_logs(db: Session) -> list:
+        """Fetch all audit logs for global export, joined with user info."""
+        from sqlalchemy.orm import joinedload
+        return db.query(AuditLog).options(joinedload(AuditLog.user)).order_by(desc(AuditLog.created_at)).all()

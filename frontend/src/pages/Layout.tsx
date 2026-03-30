@@ -13,6 +13,7 @@ import {
   MenuUnfoldOutlined,
   TeamOutlined,
   SnippetsOutlined,
+  PaperClipOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
@@ -128,7 +129,7 @@ const AppLayout: React.FC = () => {
 
   // Determine active menu key from path
   const pathKey = location.pathname.split('/')[1] || 'dashboard';
-  const activeKey = ['contracts', 'clauses', 'approvals', 'renewals', 'audit', 'dashboard', 'admin', 'templates'].includes(pathKey) ? pathKey : 'dashboard';
+  const activeKey = ['contracts', 'clauses', 'approvals', 'renewals', 'audit', 'dashboard', 'admin', 'templates', 'attachments'].includes(pathKey) ? pathKey : 'dashboard';
 
   const userMenu: any = {
     items: [
@@ -162,6 +163,7 @@ const AppLayout: React.FC = () => {
     { key: 'templates', icon: <SnippetsOutlined />, label: 'Templates', onClick: () => navigate('/templates') },
     { key: 'approvals', icon: <CheckCircleOutlined />, label: 'Approvals', onClick: () => navigate('/approvals') },
     { key: 'renewals', icon: <BellOutlined />, label: 'Renewals', onClick: () => navigate('/renewals') },
+    { key: 'attachments', icon: <PaperClipOutlined />, label: 'Attachments', onClick: () => navigate('/attachments') },
   ];
 
   // Admin-only menu items

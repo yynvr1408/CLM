@@ -1,10 +1,15 @@
 """History and Audit API endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+import csv
+import io
+import json
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request, Response
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.session import get_db
-from app.schemas.schemas import AuditLogResponse, ClauseVersionResponse, IntegrityStatus
-from app.models.models import User, AuditLog, ClauseVersion
+from app.schemas.schemas import AuditLogResponse, ClauseVersionResponse, IntegrityStatus, ContractVersionResponse
+from app.models.models import User, AuditLog, ClauseVersion, ContractVersion
 from app.services.audit_service import AuditService
 from app.services.clause_service import ClauseService
 from app.api.v1.endpoints.auth import get_current_user, require_permission
@@ -76,3 +81,65 @@ def check_audit_integrity(
 ):
     """Verify the integrity of the total audit log chain."""
     return AuditService.verify_chain(db)
+
+
+@router.get("/export")
+def export_audit_logs(
+    current_user: User = require_permission("audit:export"),
+    db: Session = Depends(get_db)
+):
+    """Export all audit logs to a CSV file."""
+    logs = AuditService.get_all_audit_logs(db)
+    
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(["Timestamp", "User", "Action", "Resource Type", "Resource ID", "Changes", "IP Address"])
+    
+    for log in logs:
+        user_name = log.user.full_name if log.user else f"User {log.user_id}"
+        writer.writerow([
+            log.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            user_name,
+            log.action,
+            log.resource_type,
+            log.resource_id or "-",
+            json.dumps(log.changes) if log.changes else "-",
+            log.ip_address or "-"
+        ])
+    
+    output.seek(0)
+    filename = f"audit_logs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@router.get("/contract/{contract_id}/versions", response_model=List[ContractVersionResponse])
+def get_contract_versions(
+    contract_id: int,
+    current_user: User = require_permission("contracts:read"),
+    db: Session = Depends(get_db)
+):
+    """Get version history for a contract."""
+    from sqlalchemy.orm import joinedload
+    versions = db.query(ContractVersion).options(joinedload(ContractVersion.contract)).filter(
+        ContractVersion.contract_id == contract_id
+    ).order_by(ContractVersion.version_number.desc()).all()
+    
+    resp = []
+    for v in versions:
+        item = ContractVersionResponse.model_validate(v)
+        # Find user who created this version
+        from app.models.models import User as UserInfo
+        user = db.query(UserInfo).filter(UserInfo.id == v.created_by_id).first()
+        if user:
+            item.created_by_name = user.full_name
+        resp.append(item)
+        
+    return resp

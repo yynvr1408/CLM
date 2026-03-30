@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -71,6 +71,25 @@ def get_attachment(
     if not attachment:
         raise HTTPException(status_code=404, detail="Attachment not found")
     return attachment
+
+@router.get("", response_model=dict)
+def list_attachments(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List all attachments in the system."""
+    query = db.query(Attachment)
+    total = query.count()
+    attachments = query.order_by(Attachment.created_at.desc()).offset(skip).limit(limit).all()
+    
+    return {
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "items": [AttachmentResponse.model_validate(a) for a in attachments]
+    }
 
 @router.delete("/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_attachment(

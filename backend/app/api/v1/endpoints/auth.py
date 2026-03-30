@@ -283,7 +283,17 @@ def update_user_role(
     current_user: User = require_permission("users:manage"),
     db: Session = Depends(get_db),
 ):
-    """Update a user's role."""
+    """Update a user's role (Super Admin only)."""
+    # Specifically restrict to super_admin or superuser
+    from app.models.models import Role
+    current_role = db.query(Role).filter(Role.id == current_user.role_id).first()
+    
+    if not current_user.is_superuser and (not current_role or current_role.name != "super_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Only super_admin can change user roles."
+        )
+
     user = AuthService.update_user_role(db, user_id, role_id)
     response = UserResponse.model_validate(user)
     response.permissions = get_user_permissions(user, db)

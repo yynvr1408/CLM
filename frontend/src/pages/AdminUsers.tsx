@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Button, message, Select, Modal, Space, Card, Tabs, Input, Badge, Spin, Descriptions } from 'antd';
 import { CheckOutlined, StopOutlined, UnlockOutlined, UserAddOutlined, SearchOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 import apiService from '../services/api';
 import { User, Role } from '../types';
 
@@ -12,6 +14,9 @@ const AdminUsers: React.FC = () => {
   const [userSubTab, setUserSubTab] = useState('all');
   const [search, setSearch] = useState('');
   const [integrityData, setIntegrityData] = useState<any>(null);
+  const { user: currentUser } = useSelector((state: RootState) => state.auth);
+
+  const isSuperAdmin = currentUser?.is_superuser || currentUser?.role_name === 'super_admin';
 
   useEffect(() => { 
     if (activeTab === 'users') {
@@ -125,6 +130,7 @@ const AdminUsers: React.FC = () => {
           size="small"
           style={{ width: 160 }}
           onChange={(val) => handleRoleChange(record.id, val)}
+          disabled={!isSuperAdmin}
         >
           {roles.map(r => (
             <Select.Option key={r.id} value={r.id}>

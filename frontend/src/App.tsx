@@ -23,6 +23,7 @@ import AuditLogs from './pages/AuditLogs';
 import Templates from './pages/Templates';
 import TemplateForm from './pages/TemplateForm';
 import AdminUsers from './pages/AdminUsers';
+import Attachments from './pages/Attachments';
 
 
 // Protected Route Component
@@ -63,6 +64,7 @@ function App() {
             <Route path="/templates" element={<Templates />} />
             <Route path="/templates/new" element={<TemplateForm />} />
             <Route path="/templates/:id/edit" element={<TemplateForm />} />
+            <Route path="/attachments" element={<Attachments />} />
             <Route path="/admin/users" element={<AdminUsers />} />
 
           </Route>

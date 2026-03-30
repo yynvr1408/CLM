@@ -2,10 +2,22 @@
  * API Service for CLM Platform v2.0
  */
 import {
-  AuthToken, User, ClauseResponse, ClauseVersionResponse,
-  AuditLogResponse, IntegrityStatus, Role, Contract,
-  DashboardStats, Clause, ContractTemplate, Tag,
-  Approval, Renewal
+  AuthToken,
+  User,
+  ClauseResponse,
+  ClauseVersionResponse,
+  AuditLogResponse,
+  IntegrityStatus,
+  Role,
+  Contract,
+  DashboardStats,
+  Clause,
+  ContractTemplate,
+  Tag,
+  Approval,
+  Renewal,
+  ApiResponse,     // ✅ ADD THIS
+  AuditLog         // ✅ ADD THIS
 } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
@@ -253,6 +265,10 @@ class ApiService {
     return this.request(`/clauses/${id}`, { method: "PATCH", body: JSON.stringify(data) });
   }
 
+  async deleteClause(id: number): Promise<void> {
+    return this.request(`/clauses/${id}`, { method: "DELETE" });
+  }
+
   // ═══════════════════════════════════════════════════════
   // Template endpoints
   // ═══════════════════════════════════════════════════════
@@ -435,9 +451,9 @@ class ApiService {
     return this.request("/history/integrity");
   }
 
-  async getAuditLogs(params: URLSearchParams): Promise<any> {
-    return this.request(`/audit/logs?${params}`);
-  }
+  async getAuditLogs(params: URLSearchParams): Promise<ApiResponse<AuditLog>> {
+  return this.request(`/audit/logs?${params}`);
+}
 
   // ═══════════════════════════════════════════════════════
   // Token management
@@ -477,6 +493,15 @@ class ApiService {
         // Headers here shouldn't include Content-Type as fetch handles it for FormData
       },
     });
+  }
+
+  async getContractVersions(id: number): Promise<any[]> {
+    return this.request(`/history/contract/${id}/versions`);
+  }
+
+  getAuditExportUrl(): string {
+    const token = localStorage.getItem("access_token");
+    return `${API_URL}/history/export?token=${token}`;
   }
 
   async deleteAttachment(id: number): Promise<void> {

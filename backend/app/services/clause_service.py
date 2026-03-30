@@ -41,9 +41,27 @@ class ClauseService:
         return new_clause
     
     @staticmethod
+    def delete_clause(db: Session, clause_id: int, user_id: int) -> bool:
+        """Physical delete of a clause (Super Admin only check handled in API)."""
+        clause = ClauseService.get_clause(db, clause_id)
+        
+        # Log DELETE action first
+        AuditService.log_action(
+            db, user_id=user_id, action="DELETE",
+            resource_type="clause", resource_id=clause_id,
+            clause_id=clause_id,
+            changes={"title": clause.title, "action": "Permanent deletion"}
+        )
+        
+        db.delete(clause)
+        db.commit()
+        return True
+
+    @staticmethod
     def get_clause(db: Session, clause_id: int) -> Clause:
-        """Get clause by ID."""
-        clause = db.query(Clause).filter(Clause.id == clause_id).first()
+        """Get clause by ID with attachments."""
+        from sqlalchemy.orm import joinedload
+        clause = db.query(Clause).options(joinedload(Clause.attachments)).filter(Clause.id == clause_id).first()
         
         if not clause:
             raise HTTPException(

@@ -1,8 +1,8 @@
 """Pydantic schemas for request/response validation."""
 import re
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, field_serializer
 from app.core.config import settings
 
 
@@ -237,6 +237,12 @@ class ClauseResponse(ClauseBase):
     created_at: datetime
     updated_at: datetime
     attachments: List[AttachmentResponse] = []
+
+    @field_serializer('created_at', 'updated_at')
+    def serialize_dt(self, dt: datetime, _info):
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat().replace("+00:00", "Z")
 
     class Config:
         from_attributes = True
@@ -604,6 +610,12 @@ class AuditLogResponse(BaseModel):
     # User info
     user_full_name: Optional[str] = None
 
+    @field_serializer('created_at')
+    def serialize_dt(self, dt: datetime, _info):
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat().replace("+00:00", "Z")
+
     class Config:
         from_attributes = True
 
@@ -612,3 +624,18 @@ class IntegrityStatus(BaseModel):
     is_valid: bool
     broken_id: Optional[int] = None
     total_logs: int
+
+
+class ContractVersionResponse(BaseModel):
+    id: int
+    contract_id: int
+    version_number: int
+    change_summary: Optional[str] = None
+    file_path: Optional[str] = None
+    created_by_id: int
+    created_at: datetime
+    # User info
+    created_by_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True

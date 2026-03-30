@@ -73,17 +73,16 @@ ALL_PERMISSIONS = [
 # Pre-defined role templates
 ROLE_TEMPLATES = {
     "super_admin": {
-        "description": "Full system access",
+        "description": "Full system access including role management and data deletion.",
         "permissions": ALL_PERMISSIONS,
     },
     "admin": {
-        "description": "Organization administrator",
+        "description": "Organization administrator. Can manage users and organization settings.",
         "permissions": [
             "contracts:create", "contracts:read", "contracts:read_all",
             "contracts:update", "contracts:update_all",
-            "contracts:delete", "contracts:delete_all",
             "contracts:submit", "contracts:execute",
-            "clauses:create", "clauses:read", "clauses:update", "clauses:delete",
+            "clauses:create", "clauses:read", "clauses:update",
             "approvals:view", "approvals:approve", "approvals:reject", "approvals:assign",
             "templates:create", "templates:read", "templates:update", "templates:delete",
             "tags:create", "tags:read", "tags:update", "tags:delete",
@@ -94,57 +93,28 @@ ROLE_TEMPLATES = {
             "notifications:manage", "org:manage",
         ],
     },
-    "contract_manager": {
-        "description": "Create, edit, submit, and manage contracts",
+    "editor": {
+        "description": "Standard internal user. Can create and edit contracts and clauses.",
         "permissions": [
             "contracts:create", "contracts:read", "contracts:read_all",
             "contracts:update", "contracts:submit",
             "clauses:create", "clauses:read", "clauses:update",
-            "approvals:view", "approvals:assign",
-            "templates:create", "templates:read", "templates:update",
-            "tags:create", "tags:read",
-            "comments:create", "comments:read",
-            "users:view", "audit:view", "reports:export",
-        ],
-    },
-    "approver": {
-        "description": "Review and approve/reject contracts",
-        "permissions": [
-            "contracts:read", "contracts:read_all",
-            "clauses:read",
-            "approvals:view", "approvals:approve", "approvals:reject",
-            "templates:read", "tags:read",
-            "comments:create", "comments:read",
-            "users:view",
-        ],
-    },
-    "legal_reviewer": {
-        "description": "Review contracts and manage clauses",
-        "permissions": [
-            "contracts:read", "contracts:read_all",
-            "clauses:create", "clauses:read", "clauses:update", "clauses:delete",
-            "approvals:view",
+            "approvals:view", "approvals:assign", "approvals:approve", "approvals:reject",
             "templates:read",
             "tags:create", "tags:read",
             "comments:create", "comments:read",
-            "users:view",
+            "users:view", "audit:view",
         ],
     },
     "viewer": {
-        "description": "Read-only access to contracts and clauses",
+        "description": "Read-only access to the system.",
         "permissions": [
             "contracts:read",
             "clauses:read",
             "approvals:view",
             "templates:read", "tags:read",
             "comments:read",
-        ],
-    },
-    "external_party": {
-        "description": "Limited view of shared contracts",
-        "permissions": [
-            "contracts:read",
-            "comments:create", "comments:read",
+            "users:view",
         ],
     },
 }

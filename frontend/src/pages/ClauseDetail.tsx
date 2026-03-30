@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Card, Descriptions, Tag, Button, Space, Spin, message, Table, Modal } from 'antd';
-import { ArrowLeftOutlined, EditOutlined, HistoryOutlined, RollbackOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, EditOutlined, HistoryOutlined, RollbackOutlined, PaperClipOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -113,6 +113,31 @@ const ClauseDetail: React.FC = () => {
             {clause.content}
           </div>
         </Card>
+
+        {clause.attachments && clause.attachments.length > 0 && (
+          <Card title={<span><PaperClipOutlined /> Attachments</span>} className="detail-card attachments-card">
+            <Table
+              dataSource={clause.attachments}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              columns={[
+                { title: 'Filename', dataIndex: 'filename', key: 'filename' },
+                { title: 'Type', dataIndex: 'file_type', key: 'file_type' },
+                { title: 'Size', dataIndex: 'file_size', key: 'file_size', render: (s) => `${(s / 1024).toFixed(1)} KB` },
+                { 
+                  title: 'Action', 
+                  key: 'action', 
+                  render: (_, record) => (
+                    <Button type="link" href={`/api/v1/attachments/download/${record.id}`} target="_blank">
+                      Download
+                    </Button>
+                  ) 
+                },
+              ]}
+            />
+          </Card>
+        )}
 
         {isAuthorized && (
           <Card title={<span><HistoryOutlined /> Version History</span>} className="detail-card version-history-card">

@@ -191,6 +191,9 @@ export interface Attachment {
   file_path: string;
   file_type?: string;
   file_size?: number;
+  contract_id?: number;
+  clause_id?: number;
+  template_id?: number;
   uploaded_by_id: number;
   created_at: string;
 }

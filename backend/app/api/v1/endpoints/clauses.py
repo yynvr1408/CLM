@@ -69,15 +69,25 @@ def update_clause(
     return ClauseService.update_clause(db, clause_id, clause_data, current_user.id)
 
 
-@router.post("/{clause_id}/deactivate")
-def deactivate_clause(
+@router.delete("/{clause_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_clause(
     clause_id: int,
     current_user: User = require_permission("clauses:delete"),
     db: Session = Depends(get_db)
 ):
-    """Deactivate a clause."""
-    clause = ClauseService.deactivate_clause(db, clause_id, current_user.id)
-    return ClauseResponse.model_validate(clause)
+    """Delete a clause (Super Admin only)."""
+    # Strict role check as per user request
+    from app.models.models import Role
+    role = db.query(Role).filter(Role.id == current_user.role_id).first()
+    
+    if not current_user.is_superuser and (not role or role.name != "super_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Only super_admin can delete clauses."
+        )
+
+    ClauseService.delete_clause(db, clause_id, current_user.id)
+    return None
 
 
 @router.get("/category/{category}", response_model=dict)

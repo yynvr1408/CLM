@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Table, Tag, Select, Card, message, Row, Col, Button } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { Layout, Table, Tag, Select, Card, message, Row, Col, Button, Tooltip, Space } from 'antd';
+import { ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import apiService from '../services/api';
 import { AuditLog } from '../types';
 import './AuditLogs.css';
@@ -22,18 +22,44 @@ const AuditLogs: React.FC = () => {
   }, [pagination, filters]);
 
   const loadLogs = async () => {
-    setLoading(true);
-    try {
-      const skip = (pagination.current - 1) * pagination.pageSize;
-      const data = await apiService.getAuditLogs(skip, pagination.pageSize);
-      const items = data.items || data || [];
-      setLogs(Array.isArray(items) ? items : []);
-      setTotal(data.total || items.length);
-    } catch (error: any) {
-      message.error('Failed to load audit logs');
-    } finally {
-      setLoading(false);
-    }
+  setLoading(true);
+
+  try {
+    const skip = (pagination.current - 1) * pagination.pageSize;
+    const params = new URLSearchParams();
+
+    params.append("skip", skip.toString());
+    params.append("limit", pagination.pageSize.toString());
+
+    if (filters.action) params.append("action", filters.action);
+    if (filters.resource_type) params.append("resource_type", filters.resource_type);
+
+    const data = await apiService.getAuditLogs(params);
+
+    const items = data.items ?? [];
+    const totalCount = data.total ?? items.length;
+
+    setLogs(items);
+    setTotal(totalCount);
+
+  } catch (error: any) {
+    console.error(error);
+    message.error("Failed to load audit logs");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const handleExport = () => {
+    const url = apiService.getAuditExportUrl();
+    // Use a hidden anchor to trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `audit_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    message.success('Export started');
   };
 
   const actionColors: Record<string, string> = {
@@ -120,9 +146,16 @@ const AuditLogs: React.FC = () => {
       <Content className="audit-content">
         <div className="page-header">
           <h1>Audit Logs</h1>
-          <Button icon={<ReloadOutlined />} onClick={loadLogs}>
-            Refresh
-          </Button>
+          <Space>
+            <Tooltip title="Export all logs as CSV">
+              <Button icon={<DownloadOutlined />} onClick={handleExport}>
+                Export CSV
+              </Button>
+            </Tooltip>
+            <Button icon={<ReloadOutlined />} onClick={loadLogs}>
+              Refresh
+            </Button>
+          </Space>
         </div>
 
         <Card className="audit-card">

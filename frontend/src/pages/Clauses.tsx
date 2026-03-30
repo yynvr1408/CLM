@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, Table, Space, Tag, Input, Select, message } from 'antd';
+import { Layout, Button, Table, Space, Tag, Input, Select, message, Modal } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 import apiService from '../services/api';
 import { Clause } from '../types';
 import './Clauses.css';
@@ -15,6 +17,8 @@ const ClausesList: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [filters, setFilters] = useState({ category: '', search: '' });
+  const { user } = useSelector((state: RootState) => state.auth);
+  const isSuperAdmin = user?.is_superuser || user?.role_name === 'super_admin';
   const categories = [
     'Payment Terms',
     'Liability',
@@ -45,6 +49,17 @@ const ClausesList: React.FC = () => {
       message.error('Failed to load clauses');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleDelete = async (id: number) => {
+    message.loading({ content: 'Deleting clause...', key: 'delete_clause' });
+    try {
+      await apiService.deleteClause(id);
+      message.success({ content: 'Clause deleted successfully', key: 'delete_clause' });
+      loadClauses();
+    } catch (error: any) {
+      message.error({ content: error.message || 'Failed to delete clause', key: 'delete_clause' });
     }
   };
 
@@ -87,6 +102,24 @@ const ClausesList: React.FC = () => {
           <Button type="link" onClick={() => navigate(`/clauses/${record.id}/edit`)}>
             Edit
           </Button>
+          {isSuperAdmin && (
+            <Button 
+              type="link" 
+              danger 
+              onClick={() => {
+                Modal.confirm({
+                  title: 'Are you sure you want to delete this clause?',
+                  content: 'This action is permanent and will be logged in the audit trail.',
+                  okText: 'Yes, Delete',
+                  okType: 'danger',
+                  cancelText: 'Cancel',
+                  onOk: () => handleDelete(record.id),
+                });
+              }}
+            >
+              Delete
+            </Button>
+          )}
         </Space>
       ),
     },
