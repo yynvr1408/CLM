@@ -17,6 +17,7 @@ class ClauseService:
         created_by_id: int
     ) -> Clause:
         """Create a new reusable clause."""
+        from app.models.models import Attachment
         new_clause = Clause(
             title=clause_data.title,
             content=clause_data.content,
@@ -27,8 +28,13 @@ class ClauseService:
         )
         
         db.add(new_clause)
-        db.commit()
-        db.refresh(new_clause)
+        db.flush()  # Get ID
+
+        # Link attachments
+        if clause_data.attachment_ids:
+            db.query(Attachment).filter(
+                Attachment.id.in_(clause_data.attachment_ids)
+            ).update({"clause_id": new_clause.id}, synchronize_session=False)
         
         # Audit log
         AuditService.log_action(
@@ -52,6 +58,14 @@ class ClauseService:
             clause_id=clause_id,
             changes={"title": clause.title, "action": "Permanent deletion"}
         )
+        
+        # Detach or delete dependent records to prevent FK Integrity Errors
+        from app.models.models import AuditLog, Attachment, ContractClause, TemplateClause
+        
+        db.query(AuditLog).filter(AuditLog.clause_id == clause_id).update({"clause_id": None})
+        db.query(Attachment).filter(Attachment.clause_id == clause_id).update({"clause_id": None})
+        db.query(ContractClause).filter(ContractClause.clause_id == clause_id).delete()
+        db.query(TemplateClause).filter(TemplateClause.clause_id == clause_id).delete()
         
         db.delete(clause)
         db.commit()

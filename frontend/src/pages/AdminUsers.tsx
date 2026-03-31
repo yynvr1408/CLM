@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Button, message, Select, Modal, Space, Card, Tabs, Input, Badge, Spin, Descriptions } from 'antd';
-import { CheckOutlined, StopOutlined, UnlockOutlined, UserAddOutlined, SearchOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Table, Tag, Button, message, Select, Modal, Space, Card, Tabs, Input, Badge, Spin, Descriptions, Popconfirm, Tooltip } from 'antd';
+import { CheckOutlined, StopOutlined, UnlockOutlined, UserAddOutlined, SearchOutlined, SafetyCertificateOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import apiService from '../services/api';
@@ -96,6 +96,14 @@ const AdminUsers: React.FC = () => {
     } catch (err: any) { message.error(err.message); }
   };
 
+  const handleDelete = async (userId: number) => {
+    try {
+      await apiService.deleteUser(userId);
+      message.success('User permanently deleted');
+      loadData();
+    } catch (err: any) { message.error(err.message || 'Failed to delete user'); }
+  };
+
   const handleRoleChange = async (userId: number, roleId: number) => {
     try {
       await apiService.updateUserRole(userId, roleId);
@@ -148,7 +156,12 @@ const AdminUsers: React.FC = () => {
           {!record.is_approved && <Tag color="orange">PENDING</Tag>}
           {record.is_approved && record.is_active && <Tag color="green">ACTIVE</Tag>}
           {record.is_approved && !record.is_active && <Tag color="red">INACTIVE</Tag>}
-          {record.is_superuser && <Tag color="purple">SUPERUSER</Tag>}
+          {record.is_superuser && <Tag color="purple" icon={<SafetyCertificateOutlined />}>SUPER USER</Tag>}
+          {record.locked_until && new Date(record.locked_until) > new Date() && (
+            <Tooltip title={`Locked until ${new Date(record.locked_until).toLocaleString()}`}>
+              <Tag color="error" icon={<StopOutlined />}>LOCKED</Tag>
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -178,9 +191,16 @@ const AdminUsers: React.FC = () => {
               Activate
             </Button>
           )}
-          <Button size="small" icon={<UnlockOutlined />} onClick={() => handleUnlock(record.id)}>
-            Unlock
-          </Button>
+          {record.locked_until && new Date(record.locked_until) > new Date() && (
+            <Button size="small" type="primary" danger icon={<UnlockOutlined />} onClick={() => handleUnlock(record.id)}>
+              Unlock
+            </Button>
+          )}
+          {isSuperAdmin && Number(currentUser?.id) !== Number(record.id) && (
+            <Popconfirm title="Are you absolutely sure? This cannot be undone." onConfirm={() => handleDelete(record.id)} okText="Delete" cancelText="Cancel">
+              <Button size="small" danger icon={<DeleteOutlined />}>Delete</Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },

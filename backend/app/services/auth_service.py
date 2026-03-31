@@ -79,6 +79,36 @@ class AuthService:
         db.commit()
         db.refresh(new_user)
 
+        # Send welcome email to the new user
+        from app.services.notification_service import NotificationService
+        try:
+            NotificationService.send_registration_welcome_email(
+                to_email=new_user.email,
+                username=new_user.username,
+                full_name=new_user.full_name or new_user.username,
+                requires_approval=requires_approval
+            )
+        except Exception as e:
+            print(f"[WARN] Could not send welcome email: {e}")
+
+        # Notify all admins about the new registration
+        try:
+            admin_roles = db.query(Role).filter(Role.name.in_(["admin", "super_admin"])).all()
+            admin_role_ids = [r.id for r in admin_roles]
+            admins = db.query(User).filter(
+                User.role_id.in_(admin_role_ids),
+                User.is_active == True
+            ).all()
+            for admin in admins:
+                NotificationService.send_new_user_admin_alert(
+                    to_email=admin.email,
+                    admin_name=admin.full_name or admin.username,
+                    new_user_email=new_user.email,
+                    new_user_name=new_user.full_name or new_user.username
+                )
+        except Exception as e:
+            print(f"[WARN] Could not send admin notification: {e}")
+
         return new_user
 
     # ── Authentication ────────────────────────────────────────
@@ -328,6 +358,27 @@ class AuthService:
         user = AuthService.get_user_by_id(db, user_id)
         user.failed_login_attempts = 0
         user.locked_until = None
+        db.commit()
+        db.refresh(user)
+        return user
+
+    @staticmethod
+    def delete_user(db: Session, user_id: int) -> User:
+        """Securely Soft Delete / Anonymize a user (Option 1)."""
+        import uuid
+        user = AuthService.get_user_by_id(db, user_id)
+        
+        # Scramble personal info to anonymize
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+        user.email = f"deleted_{uuid.uuid4().hex[:8]}@deleted.com"
+        user.username = f"deleted_user_{timestamp}"
+        user.full_name = "Deleted User"
+        user.hashed_password = "DELETED"
+        user.is_active = False
+        user.is_approved = False
+        user.is_superuser = False  # Ensure they lose superuser status
+        
+        # We KEEP organization_id to avoid accidental orphan-delete cascades if misconfigured
         db.commit()
         db.refresh(user)
         return user

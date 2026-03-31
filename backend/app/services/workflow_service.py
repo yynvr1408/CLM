@@ -74,6 +74,9 @@ class WorkflowService:
         comments: str = None
     ) -> Approval:
         """Approve a contract at given level."""
+        from app.services.notification_service import NotificationService
+        from app.models.models import User
+        
         approval = WorkflowService.get_approval(db, approval_id)
         
         if approval.status != "pending":
@@ -97,10 +100,26 @@ class WorkflowService:
         if all_approved:
             contract.status = "approved"
             
+            # Notify owner
+            owner = db.query(User).filter(User.id == contract.owner_id).first()
+            if owner:
+                NotificationService.send_status_change_notification(
+                    to_email=owner.email,
+                    contract_title=contract.title,
+                    old_status="submitted",
+                    new_status="approved"
+                )
+            
             # Create renewal record if end_date exists
             if contract.end_date:
-                # Alert date is 30 days before end_date by default
-                alert_date = contract.end_date - timedelta(days=30)
+                from app.services.daily_digest_service import get_org_renewal_alert_days
+                from app.models.models import Organization
+                
+                org = db.query(Organization).filter(Organization.id == contract.organization_id).first()
+                alert_days = get_org_renewal_alert_days(org)
+                
+                # Alert date is calculated dynamically
+                alert_date = contract.end_date - timedelta(days=alert_days)
                 
                 # Check for existing renewal
                 existing_renewal = db.query(Renewal).filter(Renewal.contract_id == contract.id).first()
@@ -137,6 +156,9 @@ class WorkflowService:
         comments: str
     ) -> Approval:
         """Reject a contract at given level."""
+        from app.services.notification_service import NotificationService
+        from app.models.models import User
+        
         approval = WorkflowService.get_approval(db, approval_id)
         
         if approval.status != "pending":
@@ -150,7 +172,18 @@ class WorkflowService:
         
         # Update contract status
         contract = db.query(Contract).filter(Contract.id == approval.contract_id).first()
+        old_status = contract.status
         contract.status = "rejected"
+        
+        # Notify owner
+        owner = db.query(User).filter(User.id == contract.owner_id).first()
+        if owner:
+            NotificationService.send_status_change_notification(
+                to_email=owner.email,
+                contract_title=contract.title,
+                old_status=old_status,
+                new_status="rejected"
+            )
         
         # Audit log
         audit = AuditLog(

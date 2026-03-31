@@ -97,27 +97,14 @@ async def lifespan(app: FastAPI):
                 admin_user.is_approved = True
                 db.commit()
 
-        # ------- Seed IT Acts & Laws Infrastructure (Clauses) -----
-        it_clause = db.query(Clause).filter(Clause.title == "IT Act Compliance").first()
-        if not it_clause:
-            it_clause = Clause(
-                title="IT Act Compliance",
-                content="Standard placeholder for IT Act compliance requirements.",
-                category="IT Acts & Laws",
-                organization_id=default_org.id,
-                created_by_id=admin_user.id
-            )
-            db.add(it_clause)
-            db.commit()
-            db.refresh(it_clause)
-            print("[OK] Seeded IT Act Compliance clause.")
+
 
         # ------- Seed Sample Template -----------------------------
         sample_template = db.query(ContractTemplate).filter(ContractTemplate.name == "Standard Service Agreement").first()
         if not sample_template:
             sample_template = ContractTemplate(
                 name="Standard Service Agreement",
-                description="General service agreement with IT compliance.",
+                description="General service agreement for standard business operations.",
                 contract_type="Service Agreement",
                 organization_id=default_org.id,
                 created_by_id=admin_user.id
@@ -207,6 +194,10 @@ async def lifespan(app: FastAPI):
     yield
 
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.core.middleware import limiter
+
 # ===============================================================
 # Initialize FastAPI app
 # ===============================================================
@@ -219,6 +210,10 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
     lifespan=lifespan,
 )
+
+# Attach rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # ===============================================================

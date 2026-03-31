@@ -21,6 +21,7 @@ const ContractForm: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [contract, setContract] = useState<Contract | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [newAttachmentIds, setNewAttachmentIds] = useState<number[]>([]);
 
 
   // Clause selection state
@@ -95,6 +96,7 @@ const ContractForm: React.FC = () => {
           clause_id: clauseId,
           order: index + 1,
         }));
+        payload.attachment_ids = newAttachmentIds;
         await apiService.createContract(payload);
         message.success('Contract created successfully');
       }
@@ -264,16 +266,20 @@ const ContractForm: React.FC = () => {
               </Form.Item>
             </div>
 
-            {isEdit && (
-              <div style={{ marginTop: 24 }}>
-                <FileUploader
-                  parentId={{ contract_id: parseInt(id!) }}
-                  existingAttachments={attachments}
-                  onUploadSuccess={(att) => setAttachments(prev => [...prev, att])}
-                  onDeleteSuccess={(attId) => setAttachments(prev => prev.filter(a => a.id !== attId))}
-                />
-              </div>
-            )}
+            <div style={{ marginTop: 24 }}>
+              <FileUploader
+                parentId={isEdit ? { contract_id: parseInt(id!) } : {}}
+                existingAttachments={attachments}
+                onUploadSuccess={(att) => {
+                  setAttachments(prev => [...prev, att]);
+                  if (!isEdit) setNewAttachmentIds(prev => [...prev, att.id]);
+                }}
+                onDeleteSuccess={(attId) => {
+                  setAttachments(prev => prev.filter(a => a.id !== attId));
+                  setNewAttachmentIds(prev => prev.filter(id => id !== attId));
+                }}
+              />
+            </div>
           </Form>
 
         </Card>

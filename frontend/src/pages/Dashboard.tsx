@@ -52,6 +52,8 @@ const Dashboard: React.FC = () => {
     draftContracts: 0,
     approvedContracts: 0,
     upcomingRenewals: 0,
+    pendingApprovals: 0,
+    totalValue: 0,
   });
 
   useEffect(() => {
@@ -61,22 +63,24 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [contractsData, allContractsData, renewalsData] = await Promise.all([
+      const [contractsData, allContractsData, renewalsData, statsData] = await Promise.all([
         apiService.getContracts(0, 5),
         apiService.getContracts(0, 100),
         apiService.getUpcomingRenewals(0, 5),
+        apiService.getContractStats(),
       ]);
 
       setContracts(contractsData.items || []);
       setAllContracts(allContractsData.items || []);
       setRenewals(renewalsData.items || []);
 
-      const all = allContractsData.items || [];
       setStats({
-        totalContracts: allContractsData.total || all.length,
-        draftContracts: all.filter((c: Contract) => c.status === 'draft').length,
-        approvedContracts: all.filter((c: Contract) => c.status === 'approved' || c.status === 'executed').length,
-        upcomingRenewals: renewalsData.total || 0,
+        totalContracts: statsData.total_contracts,
+        draftContracts: statsData.draft_contracts,
+        approvedContracts: statsData.approved_contracts + statsData.executed_contracts,
+        upcomingRenewals: statsData.upcoming_renewals,
+        pendingApprovals: statsData.pending_approvals,
+        totalValue: statsData.total_value,
       });
     } catch (error: any) {
       message.error('Failed to load dashboard data');
@@ -204,12 +208,14 @@ const Dashboard: React.FC = () => {
       </motion.div>
 
       {/* ── Stat Cards ────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         {[
           { title: 'Total Contracts', value: stats.totalContracts, icon: FileText, gradient: 'from-indigo-500 to-indigo-600', bgLight: 'bg-indigo-50', iconColor: 'text-indigo-600' },
-          { title: 'Draft Contracts', value: stats.draftContracts, icon: Clock, gradient: 'from-amber-500 to-amber-600', bgLight: 'bg-amber-50', iconColor: 'text-amber-600' },
+          { title: 'Pending Approvals', value: stats.pendingApprovals, icon: Clock, gradient: 'from-amber-500 to-amber-600', bgLight: 'bg-amber-50', iconColor: 'text-amber-600' },
           { title: 'Approved', value: stats.approvedContracts, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bgLight: 'bg-emerald-50', iconColor: 'text-emerald-600' },
           { title: 'Upcoming Renewals', value: stats.upcomingRenewals, icon: Bell, gradient: 'from-rose-500 to-rose-600', bgLight: 'bg-rose-50', iconColor: 'text-rose-600' },
+          { title: 'Drafts', value: stats.draftContracts, icon: Clock, gradient: 'from-slate-400 to-slate-500', bgLight: 'bg-slate-50', iconColor: 'text-slate-600' },
+          { title: 'Total Value ($)', value: stats.totalValue, icon: TrendingUp, gradient: 'from-cyan-500 to-cyan-600', bgLight: 'bg-cyan-50', iconColor: 'text-cyan-600' },
         ].map((stat) => (
           <motion.div
             key={stat.title}
@@ -221,13 +227,17 @@ const Dashboard: React.FC = () => {
               <div className={`h-1 bg-gradient-to-r ${stat.gradient}`} />
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-[#64748b]">{stat.title}</p>
-                  <div className={`p-2 rounded-lg ${stat.bgLight}`}>
+                  <p className="text-sm font-medium text-[#64748b] truncate mr-1">{stat.title}</p>
+                  <div className={`p-2 rounded-lg ${stat.bgLight} shrink-0`}>
                     <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-[#0f172a]">
-                  <AnimatedNumber value={stat.value} />
+                <div className="text-2xl font-bold text-[#0f172a]">
+                  {stat.title === 'Total Value ($)' ? (
+                    <span>${stats.totalValue.toLocaleString()}</span>
+                  ) : (
+                    <AnimatedNumber value={stat.value} />
+                  )}
                 </div>
               </CardContent>
             </Card>

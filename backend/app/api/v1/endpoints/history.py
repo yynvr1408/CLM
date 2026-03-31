@@ -12,7 +12,7 @@ from app.schemas.schemas import AuditLogResponse, ClauseVersionResponse, Integri
 from app.models.models import User, AuditLog, ClauseVersion, ContractVersion
 from app.services.audit_service import AuditService
 from app.services.clause_service import ClauseService
-from app.api.v1.endpoints.auth import get_current_user, require_permission
+from app.api.v1.endpoints.auth import get_current_user, require_permission, get_user_from_query_token
 from app.models.models import Role
 
 router = APIRouter(prefix="/history", tags=["history"])
@@ -85,10 +85,15 @@ def check_audit_integrity(
 
 @router.get("/export")
 def export_audit_logs(
-    current_user: User = require_permission("audit:export"),
+    current_user: User = Depends(get_user_from_query_token),
     db: Session = Depends(get_db)
 ):
     """Export all audit logs to a CSV file."""
+    # Manual permission check since we are bypassing require_permission dependency
+    role = db.query(Role).filter(Role.id == current_user.role_id).first()
+    if not current_user.is_superuser:
+        if not role or "audit:export" not in (role.permissions or []):
+            raise HTTPException(status_code=403, detail="Insufficient permissions: audit:export required")
     logs = AuditService.get_all_audit_logs(db)
     
     # Create CSV in memory

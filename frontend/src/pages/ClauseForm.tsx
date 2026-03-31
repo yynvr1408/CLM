@@ -28,6 +28,7 @@ const ClauseForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [newAttachmentIds, setNewAttachmentIds] = useState<number[]>([]);
 
 
   useEffect(() => {
@@ -61,7 +62,10 @@ const ClauseForm: React.FC = () => {
         await apiService.updateClause(parseInt(id), values);
         message.success('Clause updated successfully');
       } else {
-        await apiService.createClause(values);
+        await apiService.createClause({ 
+          ...values, 
+          attachment_ids: newAttachmentIds 
+        });
         message.success('Clause created successfully');
       }
       navigate('/clauses');
@@ -137,14 +141,18 @@ const ClauseForm: React.FC = () => {
               />
             </Form.Item>
 
-            {isEdit && (
-              <FileUploader
-                parentId={{ clause_id: parseInt(id!) }}
-                existingAttachments={attachments}
-                onUploadSuccess={(att) => setAttachments(prev => [...prev, att])}
-                onDeleteSuccess={(attId) => setAttachments(prev => prev.filter(a => a.id !== attId))}
-              />
-            )}
+            <FileUploader
+              parentId={isEdit ? { clause_id: parseInt(id!) } : {}}
+              existingAttachments={attachments}
+              onUploadSuccess={(att) => {
+                setAttachments(prev => [...prev, att]);
+                if (!isEdit) setNewAttachmentIds(prev => [...prev, att.id]);
+              }}
+              onDeleteSuccess={(attId) => {
+                setAttachments(prev => prev.filter(a => a.id !== attId));
+                setNewAttachmentIds(prev => prev.filter(id => id !== attId));
+              }}
+            />
           </Form>
 
         </Card>

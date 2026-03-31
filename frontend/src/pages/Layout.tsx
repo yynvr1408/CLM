@@ -244,7 +244,7 @@ const AppLayout: React.FC = () => {
             <div className="header-greeting">
               {user?.full_name ? `Hi, ${user.full_name.split(' ')[0]}` : 'Welcome'}
               <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>
-                {user?.role_name}
+                {user?.is_superuser ? 'Super Admin' : user?.role_name}
               </span>
             </div>
 

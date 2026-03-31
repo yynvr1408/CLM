@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -7,7 +8,7 @@ import shutil
 from app.database.session import get_db
 from app.models.models import Attachment, User
 from app.schemas.schemas import AttachmentResponse
-from app.api.v1.endpoints.auth import get_current_user
+from app.api.v1.endpoints.auth import get_current_user, get_user_from_query_token
 from app.core.config import settings
 
 router = APIRouter()
@@ -71,6 +72,26 @@ def get_attachment(
     if not attachment:
         raise HTTPException(status_code=404, detail="Attachment not found")
     return attachment
+
+@router.get("/download/{attachment_id}")
+def download_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_user_from_query_token)
+):
+    """Download the actual physical file."""
+    attachment = db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+        
+    if not os.path.exists(attachment.file_path):
+        raise HTTPException(status_code=404, detail="Physical file missing on server")
+        
+    return FileResponse(
+        path=attachment.file_path,
+        filename=attachment.filename,
+        media_type=attachment.file_type
+    )
 
 @router.get("", response_model=dict)
 def list_attachments(

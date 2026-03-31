@@ -107,7 +107,7 @@ const Attachments: React.FC = () => {
             size="small" 
             ghost
             // Assuming download endpoint format
-            href={`/api/v1/attachments/download/${record.id}`}
+            href={`/api/v1/attachments/download/${record.id}?token=${localStorage.getItem('access_token')}`}
             target="_blank"
           >
             Download

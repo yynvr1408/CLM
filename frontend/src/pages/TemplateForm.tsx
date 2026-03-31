@@ -31,6 +31,7 @@ const TemplateForm: React.FC = () => {
   const [clauses, setClauses] = useState<Clause[]>([]);
   const [selectedClauseIds, setSelectedClauseIds] = useState<number[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [newAttachmentIds, setNewAttachmentIds] = useState<number[]>([]);
 
 
   useEffect(() => {
@@ -78,7 +79,10 @@ const TemplateForm: React.FC = () => {
         await apiService.updateTemplate(parseInt(id), templateData);
         message.success('Template updated successfully');
       } else {
-        await apiService.createTemplate(templateData);
+        await apiService.createTemplate({
+          ...templateData,
+          attachment_ids: newAttachmentIds
+        });
         message.success('Template created successfully');
       }
       navigate('/templates');
@@ -158,14 +162,18 @@ const TemplateForm: React.FC = () => {
                 <TextArea rows={4} placeholder="What is this template for?" />
               </Form.Item>
 
-              {isEdit && (
-                <FileUploader
-                  parentId={{ template_id: parseInt(id!) }}
-                  existingAttachments={attachments}
-                  onUploadSuccess={(att) => setAttachments(prev => [...prev, att])}
-                  onDeleteSuccess={(attId) => setAttachments(prev => prev.filter(a => a.id !== attId))}
-                />
-              )}
+              <FileUploader
+                parentId={isEdit ? { template_id: parseInt(id!) } : {}}
+                existingAttachments={attachments}
+                onUploadSuccess={(att) => {
+                  setAttachments(prev => [...prev, att]);
+                  if (!isEdit) setNewAttachmentIds(prev => [...prev, att.id]);
+                }}
+                onDeleteSuccess={(attId) => {
+                  setAttachments(prev => prev.filter(a => a.id !== attId));
+                  setNewAttachmentIds(prev => prev.filter(id => id !== attId));
+                }}
+              />
             </Card>
 
 

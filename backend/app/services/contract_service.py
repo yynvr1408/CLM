@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, or_
 from app.models.models import (
     Contract, ContractVersion, Clause, ContractClause, ContractTag,
-    Tag, AuditLog, utcnow
+    Tag, AuditLog, User, Approval, Renewal, utcnow
 )
 from app.schemas.schemas import ContractCreate, ContractUpdate
 from app.core.security import sanitize_search_input, compute_audit_hash
@@ -73,14 +73,25 @@ class ContractService:
                     )
                     db.add(contract_tag)
 
-        # Create initial version
+        # Add version 1 to history
         version = ContractVersion(
             contract_id=new_contract.id,
             version_number=1,
+            title=new_contract.title,
+            content=new_contract.description or "",
+            contract_type=new_contract.contract_type,
+            status=new_contract.status,
             change_summary="Initial version",
             created_by_id=owner_id
         )
         db.add(version)
+
+        # Link attachments
+        from app.models.models import Attachment
+        if contract_data.attachment_ids:
+            db.query(Attachment).filter(
+                Attachment.id.in_(contract_data.attachment_ids)
+            ).update({"contract_id": new_contract.id}, synchronize_session=False)
 
         # Audit log
         AuditService.log_action(
@@ -217,6 +228,7 @@ class ContractService:
         """Submit contract for approval."""
         from app.services.workflow_service import WorkflowService
         from app.models.models import User, Role, ContractTemplate
+        from app.services.notification_service import NotificationService
 
         contract = ContractService.get_contract(db, contract_id)
 
@@ -233,12 +245,22 @@ class ContractService:
         if contract.template_id:
             template = db.query(ContractTemplate).filter(ContractTemplate.id == contract.template_id).first()
             if template and template.approval_workflow:
-                # For now, just pick the first approver in the list
-                # Assuming approval_workflow is a list of {role: string, level: int} or similar
-                # We need a user with that role.
-                pass
+                # Logic: Find a user who matches the role in the first step of the workflow
+                # Expected format of approval_workflow: [{"role": "legal_admin", "level": 1}, ...]
+                first_step = template.approval_workflow[0]
+                target_role_name = first_step.get("role")
+                
+                target_role = db.query(Role).filter(Role.name == target_role_name).first()
+                if target_role:
+                    target_user = db.query(User).filter(
+                        User.organization_id == contract.organization_id,
+                        User.role_id == target_role.id,
+                        User.is_active == True
+                    ).first()
+                    if target_user:
+                        approver_id = target_user.id
 
-        # If no specific approver, find any admin in the organization
+        # If no specific approver found via template, find any admin in the organization
         if not approver_id:
             admin_role = db.query(Role).filter(Role.name == "admin").first()
             admin_user = db.query(User).filter(
@@ -262,6 +284,16 @@ class ContractService:
             comments="Automatic system assigned approval on contract submission."
         )
         WorkflowService.create_approval(db, contract_id, approval_data)
+
+        # Trigger notification to approver
+        approver_user = db.query(User).filter(User.id == approver_id).first()
+        if approver_user:
+            NotificationService.send_approval_notification(
+                to_email=approver_user.email,
+                approver_name=approver_user.full_name or approver_user.username,
+                contract_title=contract.title,
+                contract_number=contract.contract_number
+            )
 
         # Audit log
         AuditService.log_action(
@@ -406,6 +438,25 @@ class ContractService:
         all_contracts = query.all()
         today = date.today()
 
+        # Get additional stats
+        pending_approvals_query = db.query(Approval).filter(Approval.status == "pending")
+        if organization_id:
+            pending_approvals_query = pending_approvals_query.join(Contract).filter(Contract.organization_id == organization_id)
+        if owner_id:
+            pending_approvals_query = pending_approvals_query.filter(Approval.approver_id == owner_id)
+        
+        upcoming_renewals_query = db.query(Renewal).filter(Renewal.status == "pending", Renewal.renewal_date >= today, Renewal.renewal_date <= today + timedelta(days=30))
+        if organization_id:
+            upcoming_renewals_query = upcoming_renewals_query.join(Contract).filter(Contract.organization_id == organization_id)
+        
+        overdue_renewals_query = db.query(Renewal).filter(Renewal.status == "pending", Renewal.renewal_date < today)
+        if organization_id:
+            overdue_renewals_query = overdue_renewals_query.join(Contract).filter(Contract.organization_id == organization_id)
+
+        total_users_query = db.query(User)
+        if organization_id:
+            total_users_query = total_users_query.filter(User.organization_id == organization_id)
+
         stats = {
             "total_contracts": len(all_contracts),
             "draft_contracts": sum(1 for c in all_contracts if c.status == "draft"),
@@ -414,6 +465,10 @@ class ContractService:
             "rejected_contracts": sum(1 for c in all_contracts if c.status == "rejected"),
             "executed_contracts": sum(1 for c in all_contracts if c.status == "executed"),
             "total_value": sum(c.value or 0 for c in all_contracts),
+            "pending_approvals": pending_approvals_query.count(),
+            "upcoming_renewals": upcoming_renewals_query.count(),
+            "overdue_renewals": overdue_renewals_query.count(),
+            "total_users": total_users_query.count(),
             "contracts_expiring_30d": sum(
                 1 for c in all_contracts
                 if c.end_date and today <= c.end_date <= today + timedelta(days=30)

@@ -63,3 +63,39 @@ def delete_notification(
 ):
     """Delete a notification."""
     InAppNotificationService.delete_notification(db, notification_id, current_user.id)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Admin Notification Triggers
+# ═══════════════════════════════════════════════════════════════
+@router.post("/admin/trigger-daily-digest")
+def trigger_daily_digest(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Trigger the Daily Digest service (Super Admin only)."""
+    if not current_user.is_superuser:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Only superusers can trigger daily digests")
+    
+    from app.services.daily_digest_service import send_daily_digests
+    sent_count = send_daily_digests(db)
+    
+    return {"message": "Daily digests sent successfully", "count": sent_count}
+
+
+@router.post("/admin/trigger-renewal-alerts")
+def trigger_renewal_alerts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Trigger Renewal Alerts service (Super Admin only)."""
+    if not current_user.is_superuser:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Only superusers can trigger renewal alerts")
+        
+    from app.services.sla_service import SLAService
+    sent_count = SLAService.process_renewal_alerts(db)
+    
+    return {"message": "Renewal alerts sent successfully", "count": sent_count}
+

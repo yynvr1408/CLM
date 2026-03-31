@@ -27,8 +27,6 @@ class TemplateService:
             created_by_id=created_by_id,
         )
         db.add(template)
-        db.flush()
-
         # Add clauses
         for clause_link in template_data.clause_ids:
             clause = db.query(Clause).filter(Clause.id == clause_link.clause_id).first()
@@ -40,6 +38,20 @@ class TemplateService:
                     is_required=clause_link.is_required,
                 )
                 db.add(tc)
+
+        # Link attachments
+        from app.models.models import Attachment
+        if template_data.attachment_ids:
+            db.query(Attachment).filter(
+                Attachment.id.in_(template_data.attachment_ids)
+            ).update({"template_id": template.id}, synchronize_session=False)
+
+        # Audit log
+        from app.services.audit_service import AuditService
+        AuditService.log_action(
+            db, user_id=created_by_id, action="CREATE",
+            resource_type="template", resource_id=template.id,
+        )
 
         db.commit()
         db.refresh(template)

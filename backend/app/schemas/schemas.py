@@ -117,8 +117,9 @@ class UserResponse(UserBase):
     is_active: bool
     is_superuser: bool
     is_approved: bool
-    role_id: int
+    role_id: Optional[int] = None
     organization_id: Optional[int] = None
+    locked_until: Optional[datetime] = None
     permissions: List[str] = []
     role_name: Optional[str] = None
     created_at: datetime
@@ -221,7 +222,7 @@ class ClauseBase(BaseModel):
 
 
 class ClauseCreate(ClauseBase):
-    pass
+    attachment_ids: List[int] = []
 
 
 class ClauseUpdate(BaseModel):
@@ -285,6 +286,7 @@ class ContractCreate(ContractBase):
     clauses: List[ContractClauseLink] = []
     tag_ids: List[int] = []
     template_id: Optional[int] = None
+    attachment_ids: List[int] = []
 
 
 class ContractUpdate(BaseModel):
@@ -358,6 +360,7 @@ class ContractTemplateBase(BaseModel):
 
 class ContractTemplateCreate(ContractTemplateBase):
     clause_ids: List[TemplateClauseLink] = []
+    attachment_ids: List[int] = []
 
 
 class ContractTemplateUpdate(BaseModel):
@@ -529,15 +532,23 @@ class APIKeyCreatedResponse(APIKeyResponse):
 class AuditLogResponse(BaseModel):
     id: int
     user_id: int
-    contract_id: Optional[int]
     action: str
     resource_type: str
-    resource_id: Optional[int]
-    changes: Optional[Dict]
+    resource_id: Optional[int] = None
+    contract_id: Optional[int] = None
+    clause_id: Optional[int] = None
+    changes: Optional[Dict[str, Any]] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
     entry_hash: Optional[str] = None
     created_at: datetime
+    user_full_name: Optional[str] = None
+
+    @field_serializer('created_at')
+    def serialize_dt(self, dt: datetime, _info):
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.isoformat().replace("+00:00", "Z")
 
     class Config:
         from_attributes = True
@@ -595,31 +606,6 @@ class DashboardStats(BaseModel):
 # ═══════════════════════════════════════════════════════════════
 # History & Integrity Schemas
 # ═══════════════════════════════════════════════════════════════
-class AuditLogResponse(BaseModel):
-    id: int
-    user_id: int
-    action: str
-    resource_type: str
-    resource_id: Optional[int] = None
-    contract_id: Optional[int] = None
-    clause_id: Optional[int] = None
-    changes: Optional[Dict[str, Any]] = None
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
-    created_at: datetime
-    # User info
-    user_full_name: Optional[str] = None
-
-    @field_serializer('created_at')
-    def serialize_dt(self, dt: datetime, _info):
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.isoformat().replace("+00:00", "Z")
-
-    class Config:
-        from_attributes = True
-
-
 class IntegrityStatus(BaseModel):
     is_valid: bool
     broken_id: Optional[int] = None
@@ -634,7 +620,6 @@ class ContractVersionResponse(BaseModel):
     file_path: Optional[str] = None
     created_by_id: int
     created_at: datetime
-    # User info
     created_by_name: Optional[str] = None
 
     class Config:

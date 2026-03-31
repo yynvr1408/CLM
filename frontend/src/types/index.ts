@@ -16,6 +16,7 @@ export interface User {
   permissions: string[];
   created_at: string;
   updated_at: string;
+  locked_until?: string | null;
 }
 
 export interface Organization {
@@ -251,7 +252,9 @@ export interface ContractDetailResponse extends Contract {
   tags: Tag[];
 }
 
-export interface ClauseCreate extends Omit<Clause, 'id' | 'version' | 'is_active' | 'created_at' | 'updated_at' | 'attachments'> {}
+export interface ClauseCreate extends Omit<Clause, 'id' | 'version' | 'is_active' | 'created_at' | 'updated_at' | 'attachments'> {
+  attachment_ids?: number[];
+}
 export interface ClauseUpdate extends Partial<ClauseCreate> {}
 export interface ClauseResponse extends Clause {}
 

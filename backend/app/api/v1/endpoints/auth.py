@@ -10,6 +10,8 @@ from app.schemas.schemas import (
 from app.services.auth_service import AuthService
 from app.core.security import decode_token, security, get_token_from_request, check_permissions
 from app.models.models import User, Role
+from app.core.middleware import limiter
+from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -45,6 +47,33 @@ def get_current_user(
 
     return user
 
+
+def get_user_from_query_token(
+    token: str = Query(...),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current authenticated user via Query strictly for Downloads/Exports."""
+    try:
+        payload = decode_token(token)
+        
+        # Check token blocklist
+        jti = payload.get("jti")
+        if jti and AuthService.is_token_blocklisted(db, jti):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked")
+            
+        user_id = int(payload.get("sub"))
+        user = AuthService.get_user_by_id(db, user_id)
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+            
+        return user
+    except Exception:
+        # Return a pretty HTML error for browser-based downloads if possible
+        from fastapi.responses import HTMLResponse
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Session expired or invalid token. Please log in again to download files."
+        )
 
 # ═══════════════════════════════════════════════════════════════
 # RBAC Permission Dependency
@@ -88,7 +117,9 @@ def get_user_permissions(user: User, db: Session) -> list:
 # ═══════════════════════════════════════════════════════════════
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_REGISTER)
 def register(
+    request: Request,
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
@@ -104,10 +135,11 @@ def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit(settings.RATE_LIMIT_LOGIN)
 def login(
+    request: Request,
     login_data: LoginRequest,
-    db: Session = Depends(get_db),
-    request: Request = None
+    db: Session = Depends(get_db)
 ):
     """Login with email and password (with account lockout)."""
     user = AuthService.authenticate_user(db, login_data.email, login_data.password)
@@ -132,7 +164,9 @@ def get_me(
 
 
 @router.post("/refresh", response_model=TokenResponse)
+@limiter.limit("10/minute")
 def refresh_token(
+    request: Request,
     credentials=Depends(security),
     db: Session = Depends(get_db)
 ):
@@ -226,6 +260,13 @@ def approve_user(
 ):
     """Approve a pending user registration."""
     user = AuthService.approve_user(db, user_id)
+    
+    from app.services.audit_service import AuditService
+    AuditService.log_action(
+        db, user_id=current_user.id, action="APPROVE_USER",
+        resource_type="user", resource_id=user_id
+    )
+    
     response = UserResponse.model_validate(user)
     response.permissions = get_user_permissions(user, db)
     return response
@@ -241,6 +282,13 @@ def deactivate_user(
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
     user = AuthService.deactivate_user(db, user_id)
+    
+    from app.services.audit_service import AuditService
+    AuditService.log_action(
+        db, user_id=current_user.id, action="DEACTIVATE_USER",
+        resource_type="user", resource_id=user_id
+    )
+    
     response = UserResponse.model_validate(user)
     response.permissions = get_user_permissions(user, db)
     return response
@@ -258,6 +306,14 @@ def activate_user(
     user.is_approved = True
     db.commit()
     db.refresh(user)
+    
+    from app.services.audit_service import AuditService
+    AuditService.log_action(
+        db, user_id=current_user.id, action="ACTIVATE_USER",
+        resource_type="user", resource_id=user_id,
+        changes={"is_active": "True", "is_approved": "True"}
+    )
+    
     response = UserResponse.model_validate(user)
     response.permissions = get_user_permissions(user, db)
     return response
@@ -271,6 +327,13 @@ def unlock_user(
 ):
     """Unlock a locked user account."""
     user = AuthService.unlock_user(db, user_id)
+    
+    from app.services.audit_service import AuditService
+    AuditService.log_action(
+        db, user_id=current_user.id, action="UNLOCK_USER",
+        resource_type="user", resource_id=user_id
+    )
+    
     response = UserResponse.model_validate(user)
     response.permissions = get_user_permissions(user, db)
     return response
@@ -295,11 +358,51 @@ def update_user_role(
         )
 
     user = AuthService.update_user_role(db, user_id, role_id)
+    
+    from app.services.audit_service import AuditService
+    AuditService.log_action(
+        db, user_id=current_user.id, action="UPDATE_USER_ROLE",
+        resource_type="user", resource_id=user_id,
+        changes={"role_id": str(role_id)}
+    )
+    
     response = UserResponse.model_validate(user)
     response.permissions = get_user_permissions(user, db)
     role = db.query(Role).filter(Role.id == user.role_id).first()
     response.role_name = role.name if role else ""
     return response
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Permanently anonymize/delete a user (Super Admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Only Super Admins can delete users."
+        )
+    
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own superuser account."
+        )
+
+    target_user = AuthService.get_user_by_id(db, user_id)
+    
+    from app.services.audit_service import AuditService
+    AuditService.log_action(
+        db, user_id=current_user.id, action="DELETE_USER",
+        resource_type="user", resource_id=user_id,
+        changes={"removed_email": target_user.email, "method": "anonymized_soft_delete"}
+    )
+
+    AuthService.delete_user(db, user_id)
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════

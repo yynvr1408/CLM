@@ -1,16 +1,65 @@
 """SLA and renewal monitoring service."""
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
-from app.models.models import Renewal, Contract, AuditLog
+from app.services.notification_service import NotificationService
+from app.models.models import Renewal, Contract, User, AuditLog
 from app.schemas.schemas import RenewalCreate, RenewalUpdate
 from app.services.audit_service import AuditService
 from fastapi import HTTPException, status
 from datetime import date, datetime, timedelta
 from typing import List, Tuple
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SLAService:
     """Service for SLA monitoring and renewal management."""
+    
+    @staticmethod
+    def process_renewal_alerts(db: Session) -> int:
+        """
+        Check all pending renewals and send alerts if alert_date has passed.
+        Returns the count of notifications sent.
+        """
+        today = date.today()
+        
+        # Find renewals where alert_date <= today and notification not yet sent
+        to_alert = db.query(Renewal).filter(
+            and_(
+                Renewal.alert_date <= today,
+                Renewal.notification_sent == False,
+                Renewal.status == "pending"
+            )
+        ).all()
+
+        sent_count = 0
+        for renewal in to_alert:
+            contract = db.query(Contract).filter(Contract.id == renewal.contract_id).first()
+            if contract:
+                owner = db.query(User).filter(User.id == contract.owner_id).first()
+                if owner:
+                    success = NotificationService.send_renewal_alert(
+                        to_email=owner.email,
+                        contract_title=contract.title,
+                        contract_number=contract.contract_number,
+                        renewal_date=renewal.renewal_date.isoformat()
+                    )
+                    
+                    if success:
+                        renewal.notification_sent = True
+                        renewal.status = "notified"
+                        sent_count += 1
+                        
+                        # Add audit log
+                        AuditService.log_action(
+                            db, user_id=1, action="RENEWAL_ALERT_SENT",
+                            resource_type="renewal", resource_id=renewal.id,
+                            contract_id=contract.id
+                        )
+
+        db.commit()
+        return sent_count
     
     @staticmethod
     def create_renewal(

@@ -16,8 +16,8 @@ import {
   Tag,
   Approval,
   Renewal,
-  ApiResponse,     // ✅ ADD THIS
-  AuditLog         // ✅ ADD THIS
+  ApiResponse,
+  AuditLog
 } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
@@ -154,6 +154,10 @@ class ApiService {
 
   async updateUserRole(userId: number, roleId: number): Promise<User> {
     return this.request(`/auth/users/${userId}/role?role_id=${roleId}`, { method: "PATCH" });
+  }
+
+  async deleteUser(userId: number): Promise<void> {
+    return this.request(`/auth/users/${userId}`, { method: "DELETE" });
   }
 
   // ═══════════════════════════════════════════════════════
@@ -476,6 +480,10 @@ class ApiService {
   // ═══════════════════════════════════════════════════════
   // Attachment endpoints
   // ═══════════════════════════════════════════════════════
+  async getAttachments(skip: number = 0, limit: number = 20): Promise<any> {
+    return this.request(`/attachments?skip=${skip}&limit=${limit}`);
+  }
+
   async uploadAttachment(
     file: File, 
     parentId?: { contract_id?: number; clause_id?: number; template_id?: number }

@@ -129,7 +129,7 @@ const ClauseDetail: React.FC = () => {
                   title: 'Action', 
                   key: 'action', 
                   render: (_, record) => (
-                    <Button type="link" href={`/api/v1/attachments/download/${record.id}`} target="_blank">
+                    <Button type="link" href={`/api/v1/attachments/download/${record.id}?token=${localStorage.getItem('access_token')}`} target="_blank">
                       Download
                     </Button>
                   ) 
