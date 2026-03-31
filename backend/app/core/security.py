@@ -4,6 +4,24 @@ import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
+import logging
+
+# --- Python 3.13 + passlib monkeypatch ---
+import passlib.utils.handlers
+if not hasattr(passlib.utils.handlers, "HasRawParameters"):
+    class _HasRawParameters:
+        pass
+    passlib.utils.handlers.HasRawParameters = _HasRawParameters
+
+# Legacy passlib might fail to detect bcrypt version or handle bcrypt 4.0+
+try:
+    import bcrypt
+    import passlib.handlers.bcrypt
+    # Force passlib to use the installed bcrypt with correct settings
+except ImportError:
+    pass
+# -----------------------------------------
+
 from passlib.context import CryptContext
 import jwt
 from fastapi import HTTPException, status, Depends, Request
